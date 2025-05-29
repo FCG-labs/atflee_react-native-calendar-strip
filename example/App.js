@@ -7,13 +7,13 @@
 import React, { Component } from 'react';
 import { View, Text, Button } from 'react-native';
 import CalendarStrip from './CalendarStrip/CalendarStrip';
-import moment from 'moment';
+import dayjs from 'dayjs';
 
 export default class App extends Component<{}> {
   constructor(props) {
     super(props);
 
-    let startDate = moment(); // today
+    let startDate = dayjs(); // today
 
     // Create a week's worth of custom date styles and marked dates.
     let customDatesStyles = [];
@@ -71,13 +71,13 @@ export default class App extends Component<{}> {
   }
 
   setSelectedDateNextWeek = date => {
-    const selectedDate = moment(this.state.selectedDate).add(1, 'week');
+    const selectedDate = dayjs(this.state.selectedDate).add(1, 'week');
     const formattedDate = selectedDate.format('YYYY-MM-DD');
     this.setState({ selectedDate, formattedDate });
   }
 
   setSelectedDatePrevWeek = date => {
-    const selectedDate = moment(this.state.selectedDate).subtract(1, 'week');
+    const selectedDate = dayjs(this.state.selectedDate).subtract(1, 'week');
     const formattedDate = selectedDate.format('YYYY-MM-DD');
     this.setState({ selectedDate, formattedDate });
   }

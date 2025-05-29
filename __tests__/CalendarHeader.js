@@ -1,13 +1,13 @@
 import React from "react";
 import { configure, shallow } from "enzyme";
 import Adapter from "enzyme-adapter-react-16";
-import moment from "moment";
+import dayjs from "../src/dayjs";
 
 import CalendarHeader from "../src/CalendarHeader";
 
 configure({ adapter: new Adapter() });
 
-const today = moment();
+const today = dayjs();
 
 describe("CalendarHeader Component", () => {
   it("should render without issues", () => {
