@@ -13,7 +13,7 @@ import {
   DataProvider,
   LayoutProvider,
 } from "recyclerlistview";
-import moment from "moment";
+import dayjs from "./dayjs";
 
 export default class CalendarScroller extends Component {
   static propTypes = {
@@ -139,7 +139,7 @@ export default class CalendarScroller extends Component {
     //   Math.round(this.state.numVisibleItems / 2) - 1,
     //   "days"
     // );
-    let targetDate = moment(date).isoWeekday(1);
+    let targetDate = dayjs(date).isoWeekday(1);
     const { minDate, maxDate } = this.props;
 
     // Falls back to min or max date when the given date exceeds the available dates
@@ -183,7 +183,7 @@ export default class CalendarScroller extends Component {
     const data = [];
     let _newStartDate = newStartDate;
     if (minDate && newStartDate.isBefore(minDate, "day")) {
-      _newStartDate = moment(minDate);
+      _newStartDate = dayjs(minDate);
     }
     for (let i = 0; i < this.state.numDays; i++) {
       let date = _newStartDate.clone().add(i, "days");
@@ -230,14 +230,14 @@ export default class CalendarScroller extends Component {
     const visibleStartIndex = all[0];
     const visibleStartDate = data[visibleStartIndex]
       ? data[visibleStartIndex].date
-      : moment();
+      : dayjs();
     const visibleEndIndex = Math.min(
       visibleStartIndex + numVisibleItems - 1,
       data.length - 1
     );
     const visibleEndDate = data[visibleEndIndex]
       ? data[visibleEndIndex].date
-      : moment();
+      : dayjs();
 
     const { updateMonthYear, onWeekChanged } = this.props;
 
@@ -316,12 +316,12 @@ export default class CalendarScroller extends Component {
       ? visibleStartDate
       : data[visibleStartIndex]
       ? data[visibleStartIndex].date
-      : moment();
+      : dayjs();
     const prevEndDate = visibleEndDate
       ? visibleEndDate
       : data[visibleEndIndex]
       ? data[visibleEndIndex].date
-      : moment();
+      : dayjs();
 
     this.setState({
       prevStartDate,

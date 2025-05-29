@@ -141,16 +141,16 @@ import {
     AppRegistry,
     View
 } from 'react-native';
-import moment from 'moment';
+import dayjs from 'dayjs';
 
 import CalendarStrip from 'react-native-calendar-strip';
 
 class Example extends Component {
     let datesWhitelist = [{
-      start: moment(),
-      end: moment().add(3, 'days')  // total 4 days enabled
+      start: dayjs(),
+      end: dayjs().add(3, 'days')  // total 4 days enabled
     }];
-    let datesBlacklist = [ moment().add(1, 'days') ]; // 1 day disabled
+    let datesBlacklist = [ dayjs().add(1, 'days') ]; // 1 day disabled
 
     render() {
         return (
@@ -192,13 +192,13 @@ AppRegistry.registerComponent('Example', () => Example);
 | **`numDaysInWeek`**  | Number of days shown in week. Applicable only when scrollable is false.                                                                                            | Number   | **`7`**    |
 | **`scrollable`**     | Dates are scrollable if true.                                                                                                                                      | Bool     | **`False`**|
 | **`scrollerPaging`** | Dates are scrollable as a page (7 days) if true (Only works with `scrollable` set to true).                                                                        | Bool     | **`False`**|
-| **`startingDate`**   | Date to be used for centering the calendar/showing the week based on that date. It is internally wrapped by `moment` so it accepts both `Date` and `moment Date`.  | Any      |
-| **`selectedDate`**   | Date to be used as pre selected Date. It is internally wrapped by `moment` so it accepts both `Date` and `moment Date`.                                            | Any      |
-| **`onDateSelected`** | Function to be used as a callback when a date is selected. Receives param `date` Moment date.                                                                      | Function |
-| **`onWeekChanged`**  | Function to be used as a callback when a week is changed. Receives params `(start, end)` Moment dates.                                                             | Function |
-| **`onWeekScrollStart`**| Function to be used as a callback in `scrollable` mode when dates page starts gliding. Receives params `(start, end)` Moment dates.                              | Function |
-| **`onWeekScrollEnd`**| Function to be used as a callback in `scrollable` mode when dates page stops gliding. Receives params `(start, end)` Moment dates.                                 | Function |
-| **`onHeaderSelected`**| Function to be used as a callback when the header is selected. Receives param object `{weekStartDate, weekEndDate}` Moment dates.                                 | Function |
+| **`startingDate`**   | Date to be used for centering the calendar/showing the week based on that date. It is internally wrapped by `dayjs` so it accepts both `Date` and `dayjs Date`.  | Any      |
+| **`selectedDate`**   | Date to be used as pre selected Date. It is internally wrapped by `dayjs` so it accepts both `Date` and `dayjs Date`.                                            | Any      |
+| **`onDateSelected`** | Function to be used as a callback when a date is selected. Receives param `date` dayjs date.                                                                      | Function |
+| **`onWeekChanged`**  | Function to be used as a callback when a week is changed. Receives params `(start, end)` dayjs dates.                                                             | Function |
+| **`onWeekScrollStart`**| Function to be used as a callback in `scrollable` mode when dates page starts gliding. Receives params `(start, end)` dayjs dates.                              | Function |
+| **`onWeekScrollEnd`**| Function to be used as a callback in `scrollable` mode when dates page stops gliding. Receives params `(start, end)` dayjs dates.                                 | Function |
+| **`onHeaderSelected`**| Function to be used as a callback when the header is selected. Receives param object `{weekStartDate, weekEndDate}` dayjs dates.                                 | Function |
 | **`headerText`**     | Text to use in the header. Use with `onWeekChanged` to receive the visible start & end dates.                                                                      | String  |
 | **`updateWeek`**     | Update the week view if other props change. If `false`, the week view won't change when other props change, but will still respond to left/right selectors.        | Bool     | **`True`** |
 | **`useIsoWeekday`**  | start week on ISO day of week (default true). If false, starts week on _startingDate_ parameter.                                                                   | Bool     | **`True`** |
@@ -215,12 +215,12 @@ AppRegistry.registerComponent('Example', () => Example);
 ```jsx
   datesWhitelist = [
     // single date (today)
-    moment(),
+    dayjs(),
 
     // date range
     {
-      start: (Date or moment Date),
-      end: (Date or moment Date)
+      start: (Date or dayjs Date),
+      end: (Date or dayjs Date)
     }
   ];
 
@@ -321,7 +321,7 @@ AppRegistry.registerComponent('Example', () => Example);
 | **`calendarHeaderStyle`**      | Style for the header text of the calendar                                                                                                  | Any            |
 | **`calendarHeaderContainerStyle`** | Style for the header text wrapper of the calendar                                                                                      | Any            |
 | **`calendarHeaderPosition`**   | Position of the header text (above or below)                                                                                               | `above, below` | **`above`** |
-| **`calendarHeaderFormat`**     | Format for the header text of the calendar. For options, refer to [Moment documentation](http://momentjs.com/docs/#/displaying/format/)    | String         |
+| **`calendarHeaderFormat`**     | Format for the header text of the calendar. For options, refer to [dayjs documentation](https://day.js.org/docs/en/display/format)    | String         |
 | **`dateNameStyle`**            | Style for the name of the day on work days in dates strip                                                                                  | Any            |
 | **`dateNumberStyle`**          | Style for the number of the day on work days in dates strip.                                                                               | Any            |
 | **`dayContainerStyle`**        | Style for all day containers. RNCS scales the width & height responsively, so take that into account if overriding them.                   | Any            |
@@ -364,7 +364,7 @@ This prop may be passed an array of style objects or a callback which receives a
 
 ```jsx
   let customDatesStyles = [];
-  let startDate = moment();
+  let startDate = dayjs();
   for (let i=0; i<6; i++) {
     customDatesStyles.push({
         startDate: startDate.clone().add(i, 'days'), // Single date since no endDate provided
@@ -500,7 +500,7 @@ The `daySelectionAnimation` prop accepts an object in the following format:
 | ------------ | ---------------- | ------ |
 | **`locale`** | Locale for dates | Object |
 
-This prop is used for adding localization to react-native-calendar-strip component. The localization rules are the same as moments and can be found in [moments documentation](http://momentjs.com/docs/#/i18n/)
+This prop is used for adding localization to react-native-calendar-strip component. The localization rules follow dayjs and can be found in [dayjs documentation](https://day.js.org/docs/en/i18n/i18n)
 
 | `locale` Props | Description                                                 | Type   |
 | -------------- | ----------------------------------------------------------- | ------ |
@@ -511,18 +511,21 @@ This prop is used for adding localization to react-native-calendar-strip compone
 
 To properly make a release build, import the appropriate "Locale" module using the following steps.  Not importing the locale module will crash the release build (though the dev build will work).
 
-1- import momentJs module:
-> $ yarn add moment
+1- install dayjs with locales:
+> $ yarn add dayjs
 
 or
 
-> $ npm install moment
+> $ npm install dayjs
 
-2- Go to your index.js and import the specific "Locale" after the main moment import. Ex:
+2- Go to your index.js and import the specific locale before using CalendarStrip. Ex:
 ```
-import 'moment';
-import 'moment/locale/fr';  // language must match config
-import moment from 'moment-timezone';  // only if timezone is needed
+import dayjs from 'dayjs';
+import 'dayjs/locale/fr';  // language must match config
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);  // only if timezone is needed
+// CalendarStrip attempts to load the locale automatically, but bundlers
+// may require the locale file to be imported explicitly as above.
 ```
 
 The locale import must match the language specified in the locale config (example below).
