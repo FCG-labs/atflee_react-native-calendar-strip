@@ -6,7 +6,7 @@ import React, { Component } from "react";
 import PropTypes from "prop-types";
 import { View, Animated, PixelRatio } from "react-native";
 
-import dayjs, { startOfISOWeek } from "./dayjs";
+import dayjs, { startOfISOWeek, loadLocale } from "./dayjs";
 
 import CalendarHeader from "./CalendarHeader";
 import CalendarDay from "./CalendarDay";
@@ -126,16 +126,6 @@ class CalendarStrip extends Component {
     super(props);
     this.numDaysScroll = 800; // prefer even number divisible by 3
 
-    // if (props.locale) {
-    //   if (props.locale.name && props.locale.config) {
-    //     dayjs.updateLocale(props.locale.name, props.locale.config);
-    //   } else {
-    //     throw new Error(
-    //       "Locale prop is not in the correct format. \b Locale has to be in form of object, with params NAME and CONFIG!"
-    //     );
-    //   }
-    // }
-
     const startingDate = this.getInitialStartingDate();
     const selectedDate = this.setLocale(this.props.selectedDate);
 
@@ -221,6 +211,7 @@ class CalendarStrip extends Component {
     if (_date) {
       _date.set({ hour: 12 }); // keep date the same regardless of timezone shifts
       if (this.props.locale) {
+        loadLocale(this.props.locale.name);
         _date = _date.locale(this.props.locale.name);
       }
     }

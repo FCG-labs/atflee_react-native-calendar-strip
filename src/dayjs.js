@@ -20,6 +20,17 @@ const isoWeekday = (option, DayjsClass) => {
 
 dayjs.extend(isoWeekday);
 
+// Attempt to load a locale dynamically. Fail silently if locale is unavailable.
+export const loadLocale = (name) => {
+  if (!name) return;
+  try {
+    // eslint-disable-next-line global-require, import/no-dynamic-require
+    require(`dayjs/locale/${name}`);
+  } catch (err) {
+    console.warn(`Could not load dayjs locale '${name}':`, err.message);
+  }
+};
+
 export const startOfISOWeek = (date) => date.isoWeekday(1).startOf('day');
 
 export default dayjs;

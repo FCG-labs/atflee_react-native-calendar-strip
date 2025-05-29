@@ -524,6 +524,8 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/fr';  // language must match config
 import utc from 'dayjs/plugin/utc';
 dayjs.extend(utc);  // only if timezone is needed
+// CalendarStrip attempts to load the locale automatically, but bundlers
+// may require the locale file to be imported explicitly as above.
 ```
 
 The locale import must match the language specified in the locale config (example below).
