@@ -4,7 +4,7 @@
 
 import React, { Component } from "react";
 import PropTypes from "prop-types";
-import moment from "moment";
+import dayjs from "./dayjs";
 
 import { Text, View, Animated, Easing, LayoutAnimation, TouchableOpacity } from "react-native";
 import styles from "./Calendar.style.js";
@@ -250,7 +250,7 @@ class CalendarDay extends Component {
       if (markedDates.length === 0) {
         return {};
       }
-      return markedDates.find(md => moment(day).isSame(md.date, "day")) || {};
+      return markedDates.find(md => dayjs(day).isSame(md.date, "day")) || {};
     } else if (markedDates instanceof Function) {
       return markedDates(day) || {};
     }
