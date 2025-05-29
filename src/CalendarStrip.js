@@ -126,15 +126,15 @@ class CalendarStrip extends Component {
     super(props);
     this.numDaysScroll = 800; // prefer even number divisible by 3
 
-    if (props.locale) {
-      if (props.locale.name && props.locale.config) {
-        dayjs.updateLocale(props.locale.name, props.locale.config);
-      } else {
-        throw new Error(
-          "Locale prop is not in the correct format. \b Locale has to be in form of object, with params NAME and CONFIG!"
-        );
-      }
-    }
+    // if (props.locale) {
+    //   if (props.locale.name && props.locale.config) {
+    //     dayjs.updateLocale(props.locale.name, props.locale.config);
+    //   } else {
+    //     throw new Error(
+    //       "Locale prop is not in the correct format. \b Locale has to be in form of object, with params NAME and CONFIG!"
+    //     );
+    //   }
+    // }
 
     const startingDate = this.getInitialStartingDate();
     const selectedDate = this.setLocale(this.props.selectedDate);
