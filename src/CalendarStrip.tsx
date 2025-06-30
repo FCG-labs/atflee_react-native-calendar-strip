@@ -308,7 +308,7 @@ class CalendarStrip extends Component {
       };
     }
     this.setState(() => newState);
-    const _selectedDate = selectedDate && selectedDate.clone();
+    const _selectedDate = selectedDate ? dayjs(selectedDate) : undefined;
     this.props.onDateSelected && this.props.onDateSelected(_selectedDate);
   };
 
@@ -520,8 +520,8 @@ class CalendarStrip extends Component {
       newState.weekStartDate = weekStartDate;
       newState.weekEndDate = weekEndDate;
 
-      const _weekStartDate = weekStartDate && weekStartDate.clone();
-      const _weekEndDate = weekEndDate && weekEndDate.clone();
+      const _weekStartDate = weekStartDate ? dayjs(weekStartDate) : undefined;
+      const _weekEndDate = weekEndDate ? dayjs(weekEndDate) : undefined;
       onWeekChanged && onWeekChanged(_weekStartDate, _weekEndDate);
     }
     // else Scroller sets weekStart/EndDate and fires onWeekChanged.

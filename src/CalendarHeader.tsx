@@ -1,5 +1,6 @@
 import React from "react";
 import { Text, TouchableOpacity, TextStyle, ViewStyle } from "react-native";
+import dayjs from "./dayjs";
 
 export interface CalendarHeaderProps {
   calendarHeaderFormat: string;
@@ -73,8 +74,8 @@ class CalendarHeader extends React.PureComponent<CalendarHeaderProps> {
       headerText,
     } = this.props;
     const _headerText = headerText || this.formatCalendarHeader(calendarHeaderFormat);
-    const weekStartDate = _weekStartDate && _weekStartDate.clone();
-    const weekEndDate = _weekEndDate && _weekEndDate.clone();
+    const weekStartDate = _weekStartDate ? dayjs(_weekStartDate) : undefined;
+    const weekEndDate = _weekEndDate ? dayjs(_weekEndDate) : undefined;
 
     return (
       <TouchableOpacity
