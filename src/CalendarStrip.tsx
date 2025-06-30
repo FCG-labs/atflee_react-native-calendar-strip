@@ -182,6 +182,23 @@ class CalendarStrip extends Component<any, any> {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
+    // Helper to safely stringify avoiding circular references
+    const safeStringify = (obj: any) => {
+      const seen = new WeakSet();
+      return JSON.stringify(obj, function (key, value) {
+        if (typeof value === "object" && value !== null) {
+          if (seen.has(value)) {
+            return; // Discard duplicate reference
+          }
+          seen.add(value);
+        }
+        // Skip functions and React elements (identified by $$typeof)
+        if (typeof value === "function" || (value && value.$$typeof)) {
+          return undefined;
+        }
+        return value;
+      });
+    };
     // Extract selector icons since JSON.stringify fails on React component circular refs
     const _nextProps: any = Object.assign({}, nextProps);
     const _props: any = Object.assign({}, this.props);
@@ -191,9 +208,19 @@ class CalendarStrip extends Component<any, any> {
     delete _props.leftSelector;
     delete _props.rightSelector;
 
+    let stateChanged = true;
+    let propsChanged = true;
+    try {
+      stateChanged = safeStringify(this.state) !== safeStringify(nextState);
+      propsChanged = safeStringify(_props) !== safeStringify(_nextProps);
+    } catch (e) {
+      // Fallback to updating if serialization fails
+      stateChanged = true;
+      propsChanged = true;
+    }
     return (
-      JSON.stringify(this.state) !== JSON.stringify(nextState) ||
-      JSON.stringify(_props) !== JSON.stringify(_nextProps) ||
+      stateChanged ||
+      propsChanged ||
       this.props.leftSelector !== nextProps.leftSelector ||
       this.props.rightSelector !== nextProps.rightSelector
     );
