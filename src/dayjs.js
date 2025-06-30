@@ -10,7 +10,7 @@ dayjs.extend(advancedFormat);
 dayjs.extend(weekday);
 
 // Plugin to provide Moment-like isoWeekday functionality
-const isoWeekday = (option, DayjsClass) => {
+const isoWeekday = (option, DayjsClass) => { 
   DayjsClass.prototype.isoWeekday = function(input) {
     const current = this.day() === 0 ? 7 : this.day();
     if (input == null) return current;
