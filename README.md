@@ -1,6 +1,8 @@
 <h1 align="center"> react-native-calendar-strip </h1>
 <div align="center">
   <strong> Easy to use and visually stunning calendar component for React Native.</strong>
+  <br />
+  <em>Now written in TypeScript.</em>
 </div>
 <br>
 <div align="center">
