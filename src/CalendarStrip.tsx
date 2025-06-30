@@ -340,8 +340,19 @@ class CalendarStrip extends Component<any, any> {
       };
     }
     this.setState(() => newState);
-    const _selectedDate = selectedDate ? dayjs(selectedDate) : undefined;
-    this.props.onDateSelected && this.props.onDateSelected(_selectedDate);
+
+    let _selectedDate: ReturnType<typeof dayjs> | undefined;
+    if (selectedDate) {
+      const wrapped = dayjs(selectedDate);
+      _selectedDate = wrapped.isValid() ? wrapped : undefined;
+    } else {
+      _selectedDate = undefined;
+    }
+
+    // Only propagate the callback if the date is valid, otherwise send undefined to signal error.
+    if (this.props.onDateSelected) {
+      this.props.onDateSelected(_selectedDate);
+    }
   };
 
   // Get the currently selected date (Moment JS object)
@@ -353,16 +364,22 @@ class CalendarStrip extends Component<any, any> {
   };
 
   // Set the selected date.  To clear the currently selected date, pass in 0.
-  setSelectedDate = (date) => {
-    const mDate = dayjs(date);
-    this.onDateSelected(mDate);
-    if (this.props.scrollToOnSetSelectedDate) {
-      // Scroll to selected date, centered in the week
-      const scrolledDate = dayjs(mDate);
-      scrolledDate.subtract(Math.floor(this.props.numDaysInWeek / 2), "days");
-      this.scroller.scrollToDate(scrolledDate);
+  setSelectedDate = (date: string | number | Date | dayjs.Dayjs | null | undefined) => {
+    const mDate = date ? dayjs(date) : undefined;
+    if (mDate && mDate.isValid()) {
+      this.onDateSelected(mDate);
+      if (this.props.scrollToOnSetSelectedDate) {
+        // Scroll to selected date, centered in the week
+        const scrolledDate = dayjs(mDate);
+        scrolledDate.subtract(Math.floor(this.props.numDaysInWeek / 2), "days");
+        this.scroller.scrollToDate(scrolledDate);
+      }
+    } else {
+      // Invalid date provided – propagate undefined so consumers can handle gracefully.
+      this.onDateSelected(undefined);
     }
   };
+
 
   // Gather animations from each day. Sequence animations must be started
   // together to work around bug in RN Animated with individual starts.
