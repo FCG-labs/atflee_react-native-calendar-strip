@@ -4,7 +4,7 @@ import { Image, TouchableOpacity } from "react-native";
 
 import dayjs from "./dayjs";
 
-import styles from "./Calendar.style.js";
+import styles from "./Calendar.style";
 
 class WeekSelector extends Component {
   static propTypes = {
