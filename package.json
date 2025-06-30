@@ -22,11 +22,12 @@
   },
   "version": "2.2.6",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "types": "index.d.ts",
   "files": [
     "dist/**/*",
     "src/**/*",
     "index.ts",
+    "index.d.ts",
     "README.md"
   ],
   "directories": {
@@ -35,7 +36,7 @@
   "scripts": {
     "eslint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .js,.ts,.tsx src __tests__ --fix",
     "test": "npm run eslint && jest",
-    "build": "tsc && cp index.d.ts dist/index.d.ts",
+    "build": "tsc && mkdir -p dist/src && cp -R src/img dist/src/",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
     "contributors:add": "./node_modules/.bin/all-contributors add",
