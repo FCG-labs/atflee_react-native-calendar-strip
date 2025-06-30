@@ -90,9 +90,9 @@
     "verbose": true,
     "coverageDirectory": "./coverage/",
     "collectCoverageFrom": [
-      "src/**/*.js",
+      "src/**/*.{js,ts,tsx}",
       "!src/img.js",
-      "!example/*.js"
+      "!example/*.{js,ts,tsx}"
     ],
     "modulePathIgnorePatterns": [
       "example",

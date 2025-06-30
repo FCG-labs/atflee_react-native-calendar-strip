@@ -12,7 +12,7 @@ import CalendarHeader from "./CalendarHeader";
 import CalendarDay from "./CalendarDay";
 import WeekSelector from "./WeekSelector";
 import Scroller from "./Scroller";
-import styles from "./Calendar.style.js";
+import styles from "./Calendar.style";
 
 /*
  * Class CalendarStrip that is representing the whole calendar strip and contains CalendarDay elements

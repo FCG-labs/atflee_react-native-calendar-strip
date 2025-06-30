@@ -7,7 +7,7 @@ import PropTypes from "prop-types";
 import dayjs from "./dayjs";
 
 import { Text, View, Animated, Easing, LayoutAnimation, TouchableOpacity } from "react-native";
-import styles from "./Calendar.style.js";
+import styles from "./Calendar.style";
 
 class CalendarDay extends Component {
   static propTypes = {

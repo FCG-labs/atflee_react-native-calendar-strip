@@ -13,7 +13,7 @@ export interface CalendarHeaderProps {
   onHeaderSelected?: ({ weekStartDate, weekEndDate }: { weekStartDate?: any; weekEndDate?: any }) => void;
 }
 
-import styles from "./Calendar.style.js";
+import styles from "./Calendar.style";
 class CalendarHeader extends React.PureComponent<CalendarHeaderProps> {
 
   shouldComponentUpdate(nextProps: CalendarHeaderProps): boolean {
