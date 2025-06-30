@@ -251,8 +251,8 @@ export default class CalendarScroller extends Component {
       !visibleStartDate.isSame(_visStartDate, "month") ||
       !visibleEndDate.isSame(_visEndDate, "month")
     ) {
-      const visStart = visibleStartDate && visibleStartDate.clone();
-      const visEnd = visibleEndDate && visibleEndDate.clone();
+      const visStart = visibleStartDate ? dayjs(visibleStartDate) : undefined;
+      const visEnd = visibleEndDate ? dayjs(visibleEndDate) : undefined;
       onWeekChanged && onWeekChanged(visStart, visEnd);
     }
 
@@ -284,7 +284,7 @@ export default class CalendarScroller extends Component {
     const { prevStartDate, prevEndDate } = this.state;
 
     if (onWeekScrollStart && prevStartDate && prevEndDate) {
-      onWeekScrollStart(prevStartDate.clone(), prevEndDate.clone());
+      onWeekScrollStart(dayjs(prevStartDate), dayjs(prevEndDate));
     }
   };
 
@@ -294,7 +294,7 @@ export default class CalendarScroller extends Component {
 
     if (onWeekScrollEnd && visibleStartDate && visibleEndDate) {
       if (!visibleEndDate.isSame(prevEndDate, "day")) {
-        onWeekScrollEnd(visibleStartDate.clone(), visibleEndDate.clone());
+        onWeekScrollEnd(dayjs(visibleStartDate), dayjs(visibleEndDate));
       }
     }
   };

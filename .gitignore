@@ -37,6 +37,7 @@ npm-debug.log
 example/CalendarStrip
 package-lock.json
 yarn.lock
+dist/
 
 # BUCK
 buck-out/

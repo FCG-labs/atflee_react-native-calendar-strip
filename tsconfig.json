@@ -1,7 +1,12 @@
 {
   "compilerOptions": {
     "skipLibCheck": true,
-    "noEmit": true,
-    "esModuleInterop": true
-  }
+    "esModuleInterop": true,
+    "jsx": "react",
+    "allowJs": true,
+    "declaration": true,
+    "rootDir": "./",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*", "index.ts"]
 }
