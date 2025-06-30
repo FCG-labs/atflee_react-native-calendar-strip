@@ -35,7 +35,7 @@
   "scripts": {
     "eslint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .js,.ts,.tsx src __tests__ --fix",
     "test": "npm run eslint && jest",
-    "build": "tsc",
+    "build": "tsc && cp index.d.ts dist/index.d.ts",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
     "contributors:add": "./node_modules/.bin/all-contributors add",

@@ -126,7 +126,6 @@ interface CalendarStripProps {
 
   dayComponent?: (props: IDayComponentProps) => ReactNode;
 
-  dayContainerStyle?: StyleProp<ViewStyle>;
   dateNameStyle?: StyleProp<TextStyle>;
   dateNumberStyle?: StyleProp<TextStyle>;
   dayContainerStyle?: StyleProp<ViewStyle>;
