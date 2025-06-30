@@ -6,7 +6,20 @@ import dayjs from "./dayjs";
 
 import styles from "./Calendar.style";
 
-class WeekSelector extends Component {
+interface WeekSelectorProps {
+  controlDate?: any;
+  iconComponent?: React.ReactElement | React.ReactElement[];
+  iconContainerStyle?: any;
+  iconInstanceStyle?: any;
+  iconStyle?: any;
+  imageSource?: any;
+  size?: number;
+  onPress?: () => void;
+  weekStartDate?: any;
+  weekEndDate?: any;
+}
+
+class WeekSelector extends Component<WeekSelectorProps> {
   static propTypes = {
     controlDate: PropTypes.any,
     iconComponent: PropTypes.any,
@@ -32,8 +45,8 @@ class WeekSelector extends Component {
 
   shouldComponentUpdate(nextProps) {
     // Extract iconComponent since JSON.stringify fails on React component circular refs
-    let _nextProps = Object.assign({}, nextProps);
-    let _props = Object.assign({}, this.props);
+    const _nextProps: any = Object.assign({}, nextProps);
+    const _props: any = Object.assign({}, this.props);
 
     delete _nextProps.iconComponent;
     delete _props.iconComponent;
@@ -75,13 +88,14 @@ class WeekSelector extends Component {
 
     let component;
     if (React.isValidElement(iconComponent)) {
-      component = React.cloneElement(iconComponent, {
-        style: [iconComponent.props.style, { opacity: opacity.opacity }]
+      const element = iconComponent as React.ReactElement<any>;
+      component = React.cloneElement(element, {
+        style: [ (element.props as any).style, { opacity: opacity.opacity }]
       });
     } else if (Array.isArray(iconComponent)) {
       component = iconComponent;
     } else {
-      let imageSize = { width: size, height: size };
+      const imageSize = { width: size, height: size };
       component = (
         <Image
           style={[

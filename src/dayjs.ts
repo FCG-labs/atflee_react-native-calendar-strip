@@ -33,6 +33,6 @@ export const loadLocale = (name?: string): void => {
 };
 
 export const startOfISOWeek = (date: dayjs.Dayjs): dayjs.Dayjs =>
-  date.isoWeekday(1).startOf('day');
+  (date.isoWeekday(1) as dayjs.Dayjs).startOf('day');
 
 export default dayjs;

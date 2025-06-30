@@ -15,7 +15,13 @@ import {
 } from "recyclerlistview";
 import dayjs from "./dayjs";
 
-export default class CalendarScroller extends Component {
+export default class CalendarScroller extends Component<any, any> {
+  private rlv: any;
+  private timeoutResetPositionId: any;
+  private dataProvider: any;
+  private updateLayout!: (params: any) => { layoutProvider: any; itemHeight: number; itemWidth: number };
+  private updateDaysData!: (data: any[]) => any;
+  private shifting = false;
   static propTypes = {
     data: PropTypes.array.isRequired,
     initialRenderIndex: PropTypes.number,
@@ -85,7 +91,7 @@ export default class CalendarScroller extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    let newState = {};
+    let newState: any = {};
     let updateState = false;
 
     const { width, height, selectedDate } = this.props.renderDayParams;
@@ -139,13 +145,13 @@ export default class CalendarScroller extends Component {
     //   Math.round(this.state.numVisibleItems / 2) - 1,
     //   "days"
     // );
-    let targetDate = dayjs(date).isoWeekday(1);
+    let targetDate = dayjs(date).isoWeekday(1) as dayjs.Dayjs;
     const { minDate, maxDate } = this.props;
 
     // Falls back to min or max date when the given date exceeds the available dates
-    if (minDate && targetDate.isBefore(minDate, "day")) {
+    if (minDate && (targetDate as dayjs.Dayjs).isBefore(minDate, "day")) {
       targetDate = minDate;
-    } else if (maxDate && targetDate.isAfter(maxDate, "day")) {
+    } else if (maxDate && (targetDate as dayjs.Dayjs).isAfter(maxDate, "day")) {
       targetDate = maxDate;
     }
 
@@ -186,7 +192,7 @@ export default class CalendarScroller extends Component {
       _newStartDate = dayjs(minDate);
     }
     for (let i = 0; i < this.state.numDays; i++) {
-      let date = _newStartDate.clone().add(i, "days");
+      const date = _newStartDate.clone().add(i, "days");
       if (maxDate && date.isAfter(maxDate, "day")) {
         break;
       }
@@ -264,7 +270,7 @@ export default class CalendarScroller extends Component {
     } else {
       const minEndOffset = numDays - numVisibleItems;
       if (minEndOffset > numVisibleItems) {
-        for (let a of all) {
+        for (const a of all) {
           if (a > minEndOffset) {
             this.shiftDaysForward(visibleStartDate);
             break;
@@ -330,7 +336,7 @@ export default class CalendarScroller extends Component {
   };
 
   onLayout = (event) => {
-    let width = event.nativeEvent.layout.width;
+    const width = event.nativeEvent.layout.width;
     this.setState({
       numVisibleItems: Math.round(width / this.state.itemWidth),
     });

@@ -1,11 +1,11 @@
 import React from "react";
-import { Text, TouchableOpacity, TextStyle, ViewStyle } from "react-native";
+import { Text, TouchableOpacity, TextStyle, ViewStyle, StyleProp } from "react-native";
 import dayjs from "./dayjs";
 
 export interface CalendarHeaderProps {
   calendarHeaderFormat: string;
-  calendarHeaderContainerStyle?: ViewStyle | number;
-  calendarHeaderStyle?: TextStyle | number;
+  calendarHeaderContainerStyle?: StyleProp<ViewStyle>;
+  calendarHeaderStyle?: StyleProp<TextStyle>;
   weekStartDate?: any;
   weekEndDate?: any;
   allowHeaderTextScaling?: boolean;

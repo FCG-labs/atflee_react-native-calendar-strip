@@ -9,7 +9,8 @@ import dayjs from "./dayjs";
 import { Text, View, Animated, Easing, LayoutAnimation, TouchableOpacity } from "react-native";
 import styles from "./Calendar.style";
 
-class CalendarDay extends Component {
+class CalendarDay extends Component<any, any> {
+  private animation?: any;
   static propTypes = {
     date: PropTypes.object.isRequired,
     selectedDate: PropTypes.any,
@@ -92,13 +93,13 @@ class CalendarDay extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    let newState = {};
+    let newState: any = {};
     let doStateUpdate = false;
-    let hasDateChanged = prevProps.date !== this.props.date;
+    const hasDateChanged = prevProps.date !== this.props.date;
 
     if ((this.props.selectedDate !== prevProps.selectedDate) || hasDateChanged) {
       if (this.props.daySelectionAnimation.type !== "" && !this.props.scrollable) {
-        let configurableAnimation = {
+        const configurableAnimation = {
           duration: this.props.daySelectionAnimation.duration || 300,
           create: {
             type:
@@ -180,7 +181,7 @@ class CalendarDay extends Component {
   isDateAllowed = (date, datesBlacklist, datesWhitelist) => {
     // datesBlacklist entries override datesWhitelist
     if (Array.isArray(datesBlacklist)) {
-      for (let disallowed of datesBlacklist) {
+      for (const disallowed of datesBlacklist) {
         // Blacklist start/end object
         if (disallowed.start && disallowed.end) {
           if (date.isBetween(disallowed.start, disallowed.end, "day", "[]")) {
@@ -198,7 +199,7 @@ class CalendarDay extends Component {
 
     // Whitelist
     if (Array.isArray(datesWhitelist)) {
-      for (let allowed of datesWhitelist) {
+      for (const allowed of datesWhitelist) {
         // start/end object
         if (allowed.start && allowed.end) {
           if (date.isBetween(allowed.start, allowed.end, "day", "[]")) {
@@ -220,7 +221,7 @@ class CalendarDay extends Component {
 
   getCustomDateStyle = (date, customDatesStyles) => {
     if (Array.isArray(customDatesStyles)) {
-      for (let customDateStyle of customDatesStyles) {
+      for (const customDateStyle of customDatesStyles) {
         if (customDateStyle.endDate) {
           // Range
           if (
@@ -398,12 +399,12 @@ class CalendarDay extends Component {
 
     let _dateNameStyle = [styles.dateName, enabled ? dateNameStyle : disabledDateNameStyle];
     let _dateNumberStyle = [styles.dateNumber, enabled ? dateNumberStyle : disabledDateNumberStyle];
-    let _dateViewStyle = enabled
+    const _dateViewStyle: any[] = enabled
       ? [{ backgroundColor: "transparent" }]
       : [{ opacity: disabledDateOpacity }];
     let _customHighlightDateNameStyle;
     let _customHighlightDateNumberStyle;
-    let _dateNumberContainerStyle = [];
+    const _dateNumberContainerStyle = [];
 
     if (customStyle) {
       _dateNameStyle.push(customStyle.dateNameStyle);
@@ -461,13 +462,13 @@ class CalendarDay extends Component {
       _dateNumberContainerStyle.push(highlightDateNumberContainerStyle);
     }
 
-    let responsiveDateContainerStyle = {
+    const responsiveDateContainerStyle = {
       width: containerWidth,
       height: containerHeight,
       borderRadius: containerBorderRadius,
     };
 
-    let containerStyle = selected
+    const containerStyle = selected
       ? { ...dayContainerStyle, ...highlightDateContainerStyle }
       : dayContainerStyle;
 
