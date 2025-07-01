@@ -4,9 +4,9 @@
 
 import React, { Component } from "react";
 import PropTypes from "prop-types";
+import { Text, View, Animated, Easing, LayoutAnimation, TouchableOpacity } from "react-native";
 import dayjs from "./dayjs";
 
-import { Text, View, Animated, Easing, LayoutAnimation, TouchableOpacity } from "react-native";
 import styles from "./Calendar.style.js";
 
 class CalendarDay extends Component {
@@ -478,7 +478,7 @@ class CalendarDay extends Component {
     else {
       day = (
         <TouchableOpacity
-          onPress={onDateSelected.bind(this, date)}
+          onPress={() => onDateSelected(date)}
           disabled={!enabled}
         >
           <View
