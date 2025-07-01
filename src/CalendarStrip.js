@@ -6,6 +6,7 @@ import React, { Component } from "react";
 import PropTypes from "prop-types";
 import { View, Animated, PixelRatio } from "react-native";
 
+import fastSafeStringify from "fast-safe-stringify";
 import dayjs, { startOfISOWeek, loadLocale } from "./dayjs";
 
 import CalendarHeader from "./CalendarHeader";
@@ -187,8 +188,8 @@ class CalendarStrip extends Component {
     delete _props.rightSelector;
 
     return (
-      JSON.stringify(this.state) !== JSON.stringify(nextState) ||
-      JSON.stringify(_props) !== JSON.stringify(_nextProps) ||
+      fastSafeStringify(this.state) !== fastSafeStringify(nextState) ||
+      fastSafeStringify(_props) !== fastSafeStringify(_nextProps) ||
       this.props.leftSelector !== nextProps.leftSelector ||
       this.props.rightSelector !== nextProps.rightSelector
     );
