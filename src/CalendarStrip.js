@@ -309,7 +309,12 @@ class CalendarStrip extends Component {
       };
     }
     this.setState(() => newState);
-    const _selectedDate = selectedDate && selectedDate.clone();
+
+    let _selectedDate;
+    if (selectedDate) {
+      const wrapped = dayjs(selectedDate);
+      _selectedDate = wrapped.isValid() ? wrapped : undefined;
+    }
     this.props.onDateSelected && this.props.onDateSelected(_selectedDate);
   };
 
@@ -321,15 +326,24 @@ class CalendarStrip extends Component {
     return this.state.selectedDate;
   };
 
-  // Set the selected date.  To clear the currently selected date, pass in 0.
+  // Set the selected date. To clear the current selection, pass in null/undefined/0.
   setSelectedDate = (date) => {
-    let mDate = dayjs(date);
-    this.onDateSelected(mDate);
-    if (this.props.scrollToOnSetSelectedDate) {
-      // Scroll to selected date, centered in the week
-      const scrolledDate = dayjs(mDate);
-      scrolledDate.subtract(Math.floor(this.props.numDaysInWeek / 2), "days");
-      this.scroller.scrollToDate(scrolledDate);
+    const mDate = date ? dayjs(date) : undefined;
+
+    if (mDate && mDate.isValid()) {
+      this.onDateSelected(mDate);
+
+      if (this.props.scrollToOnSetSelectedDate && this.scroller) {
+        // Scroll to selected date, centered in the week
+        const scrolledDate = dayjs(mDate).subtract(
+          Math.floor(this.props.numDaysInWeek / 2),
+          "days"
+        );
+        this.scroller.scrollToDate(scrolledDate);
+      }
+    } else {
+      // Invalid or empty date – clear selection gracefully.
+      this.onDateSelected(undefined);
     }
   };
 
