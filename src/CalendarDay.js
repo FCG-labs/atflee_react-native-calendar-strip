@@ -51,6 +51,7 @@ class CalendarDay extends Component {
     useNativeDriver: PropTypes.bool,
     scrollable: PropTypes.bool,
     upperCaseDays: PropTypes.bool,
+    marginHorizontal: PropTypes.number,
   };
 
   // Reference: https://medium.com/@Jpoliachik/react-native-s-layoutanimation-is-awesome-4a4d317afd3e
@@ -71,7 +72,8 @@ class CalendarDay extends Component {
     showDayNumber: true,
     upperCaseDays: true,
     width: 0, // Default width and height to avoid calcSizes() *sometimes* doing Math.round(undefined) to cause NaN
-    height: 0
+    height: 0,
+    marginHorizontal: 0,
   };
 
   constructor(props) {
@@ -384,6 +386,7 @@ class CalendarDay extends Component {
       dayComponent: DayComponent,
       scrollable,
       upperCaseDays,
+      marginHorizontal,
     } = this.props;
     const {
       enabled,
@@ -465,6 +468,7 @@ class CalendarDay extends Component {
       width: containerWidth,
       height: containerHeight,
       borderRadius: containerBorderRadius,
+      marginHorizontal: marginHorizontal,
     };
 
     let containerStyle = selected

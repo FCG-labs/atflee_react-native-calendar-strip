@@ -100,7 +100,7 @@ class CalendarStrip extends Component {
 
   static defaultProps = {
     numDaysInWeek: 7,
-    useIsoWeekday: true,
+    useIsoWeekday: false,
     showMonth: true,
     showDate: true,
     updateWeek: true,
@@ -226,7 +226,7 @@ class CalendarStrip extends Component {
       // Fallback when startingDate isn't provided. However selectedDate
       // may also be undefined, defaulting to today's date.
       let date = this.setLocale(dayjs(this.props.selectedDate));
-      return this.props.useIsoWeekday ? date.startOf("isoweek") : date;
+      return this.props.useIsoWeekday ? date.startOf("isoweek") : date.day(0).startOf('day');
     }
   };
 
@@ -292,7 +292,7 @@ class CalendarStrip extends Component {
     let startingDate = dayjs(date);
     startingDate = this.props.useIsoWeekday
       ? startOfISOWeek(startingDate)
-      : startingDate;
+      : startingDate.day(0).startOf('day');
     const days = this.createDays(startingDate);
     this.setState({ startingDate, ...days });
   };
@@ -392,13 +392,15 @@ class CalendarStrip extends Component {
     dayComponentWidth = Math.min(dayComponentWidth, maxDayComponentSize);
     dayComponentWidth = Math.max(dayComponentWidth, minDayComponentSize);
     let numVisibleDays = numDaysInWeek;
-    let marginHorizontal;
+    let marginHorizontal = Math.round(dayComponentWidth * 0.05);
+
     if (scrollable) {
+      // Scroller can show more than a week – recalc visible items using original width
       numVisibleDays = Math.floor(csWidth / dayComponentWidth);
-      // Scroller requires spacing between days
-      marginHorizontal = Math.round(dayComponentWidth * 0.05);
-      dayComponentWidth = Math.round(dayComponentWidth * 0.9);
     }
+
+    // Shrink component width so that width + 2*margin equals original slice width.
+    dayComponentWidth = Math.round(dayComponentWidth * 0.9);
     let monthFontSize = Math.round(dayComponentWidth / 3.2);
     let selectorSize = Math.round(dayComponentWidth / 2.5);
     let height = showMonth ? monthFontSize : 0;
@@ -468,6 +470,7 @@ class CalendarStrip extends Component {
       marginHorizontal: this.state.marginHorizontal,
       allowDayTextScaling: this.props.shouldAllowFontScaling,
       upperCaseDays: this.props.upperCaseDays,
+      numDaysInWeek: this.props.numDaysInWeek,
     };
   };
 
@@ -481,6 +484,9 @@ class CalendarStrip extends Component {
       onWeekChanged,
     } = this.props;
     let _startingDate = startingDate;
+    if (!useIsoWeekday) {
+      _startingDate = _startingDate.clone().day(0).startOf('day');
+    }
     let days = [];
     let datesList = [];
     let numDays = numDaysInWeek;
@@ -488,11 +494,20 @@ class CalendarStrip extends Component {
 
     if (scrollable) {
       numDays = this.numDaysScroll;
-      // Center start date in scroller.
-      _startingDate = startingDate.clone().subtract(numDays / 2, "days");
+      // Center start date in scroller, then re-align to week start.
+      const halfWindow = Math.floor(numDays / 2);
+      _startingDate = startingDate.clone().subtract(halfWindow, "days");
+
       if (minDate && _startingDate.isBefore(minDate, "day")) {
         _startingDate = dayjs(minDate);
       }
+
+      // Ensure the very first item in the buffer is always the week's start
+      // (Sun for dow, Mon for ISO). This prevents cases where the list begins
+      // at Saturday and causes mis-aligned weeks after snapping.
+      _startingDate = useIsoWeekday
+        ? _startingDate.clone().isoWeekday(1).startOf("day")
+        : _startingDate.clone().day(0).startOf("day");
     }
 
     for (let i = 0; i < numDays; i++) {
@@ -574,7 +589,7 @@ class CalendarStrip extends Component {
           data={this.state.datesList}
           pagingEnabled={this.props.scrollerPaging}
           renderDay={this.renderDay}
-          renderDayParams={{ ...this.createDayProps(this.state.selectedDate) }}
+          renderDayParams={{ ...this.createDayProps(this.state.selectedDate), useIsoWeekday: this.props.useIsoWeekday }}
           maxSimultaneousDays={this.numDaysScroll}
           initialRenderIndex={this.state.initialScrollerIndex}
           minDate={this.props.minDate}
@@ -584,6 +599,7 @@ class CalendarStrip extends Component {
           onWeekScrollStart={this.props.onWeekScrollStart}
           onWeekScrollEnd={this.props.onWeekScrollEnd}
           externalScrollView={this.props.externalScrollView}
+          useIsoWeekday={this.props.useIsoWeekday}
         />
       );
     }

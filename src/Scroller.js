@@ -30,11 +30,13 @@ export default class CalendarScroller extends Component {
     onWeekScrollEnd: PropTypes.func,
     externalScrollView: PropTypes.func,
     pagingEnabled: PropTypes.bool,
+    useIsoWeekday: PropTypes.bool,
   };
 
   static defaultProps = {
     data: [],
     renderDayParams: {},
+    useIsoWeekday: false,
   };
 
   constructor(props) {
@@ -97,8 +99,30 @@ export default class CalendarScroller extends Component {
       newState = this.updateLayout(this.props.renderDayParams);
     }
 
-    if (selectedDate !== prevProps.renderDayParams.selectedDate) {
-      this.scrollToDate(selectedDate);
+    if (selectedDate) {
+      const prevSel = prevProps.renderDayParams.selectedDate;
+      const changed =
+        !prevSel || !dayjs(selectedDate).isSame(prevSel, "day");
+
+      if (changed) {
+        const { visibleStartDate, visibleEndDate } = this.state;
+
+        // Determine the week start date for the newly selected date
+        const weekStart = this.props.useIsoWeekday
+          ? dayjs(selectedDate).isoWeekday(1).startOf('day')
+          : dayjs(selectedDate).day(0).startOf('day');
+
+        // If the selected date's week is already visible, no need to scroll
+        if (
+          !visibleStartDate ||
+          !visibleEndDate ||
+          !weekStart.isSame(visibleStartDate, 'day')
+        ) {
+          this.scrollToDate(selectedDate);
+        } else {
+          /* debug log removed */
+        }
+      }
     }
 
     if (this.props.data !== prevProps.data) {
@@ -116,8 +140,9 @@ export default class CalendarScroller extends Component {
     if (this.state.visibleStartIndex === 0) {
       return;
     }
+    const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
     const newIndex = Math.max(
-      this.state.visibleStartIndex - this.state.numVisibleItems,
+      this.state.visibleStartIndex - daysInWeek,
       0
     );
     this.rlv.scrollToIndex(newIndex, true);
@@ -125,7 +150,8 @@ export default class CalendarScroller extends Component {
 
   // Scroll right, guarding against end index.
   scrollRight = () => {
-    const newIndex = this.state.visibleStartIndex + this.state.numVisibleItems;
+    const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
+    const newIndex = this.state.visibleStartIndex + daysInWeek;
     if (newIndex >= this.state.numDays - 1) {
       this.rlv.scrollToEnd(true); // scroll to the very end, including padding
       return;
@@ -135,11 +161,9 @@ export default class CalendarScroller extends Component {
 
   // Scroll to given date, and check against min and max date if available.
   scrollToDate = (date) => {
-    // let targetDate = moment(date).subtract(
-    //   Math.round(this.state.numVisibleItems / 2) - 1,
-    //   "days"
-    // );
-    let targetDate = dayjs(date).isoWeekday(1);
+    let targetDate = this.props.useIsoWeekday
+      ? dayjs(date).isoWeekday(1)
+      : dayjs(date).day(0).startOf('day');
     const { minDate, maxDate } = this.props;
 
     // Falls back to min or max date when the given date exceeds the available dates
@@ -160,18 +184,18 @@ export default class CalendarScroller extends Component {
   // Shift dates when end of list is reached.
   shiftDaysForward = (visibleStartDate = this.state.visibleStartDate) => {
     const prevVisStart = visibleStartDate.clone();
-    const newStartDate = prevVisStart
-      .clone()
-      .subtract(Math.floor(this.state.numDays / 3), "days");
+    const baseChunk = Math.floor(this.state.numDays / 3);
+    const weekChunk = Math.max(7, baseChunk - (baseChunk % 7));
+    const newStartDate = prevVisStart.clone().subtract(weekChunk, "days");
     this.updateDays(prevVisStart, newStartDate);
   };
 
   // Shift dates when beginning of list is reached.
   shiftDaysBackward = (visibleStartDate) => {
     const prevVisStart = visibleStartDate.clone();
-    const newStartDate = prevVisStart
-      .clone()
-      .subtract(Math.floor((this.state.numDays * 2) / 3), "days");
+    const baseChunk = Math.floor((this.state.numDays * 2) / 3);
+    const weekChunk = Math.max(7, baseChunk - (baseChunk % 7));
+    const newStartDate = prevVisStart.clone().subtract(weekChunk, "days");
     this.updateDays(prevVisStart, newStartDate);
   };
 
@@ -182,6 +206,9 @@ export default class CalendarScroller extends Component {
     const { minDate, maxDate } = this.props;
     const data = [];
     let _newStartDate = newStartDate;
+    _newStartDate = this.props.useIsoWeekday
+      ? _newStartDate.clone().isoWeekday(1).startOf('day')
+      : _newStartDate.clone().day(0).startOf('day');
     if (minDate && newStartDate.isBefore(minDate, "day")) {
       _newStartDate = dayjs(minDate);
     }
@@ -239,7 +266,7 @@ export default class CalendarScroller extends Component {
       ? data[visibleEndIndex].date
       : dayjs();
 
-    const { updateMonthYear, onWeekChanged } = this.props;
+    const { updateMonthYear } = this.props;
 
     // Fire month/year update on both week and month changes.  This is
     // necessary for the header and onWeekChanged updates.
@@ -253,25 +280,9 @@ export default class CalendarScroller extends Component {
     ) {
       const visStart = visibleStartDate && visibleStartDate.clone();
       const visEnd = visibleEndDate && visibleEndDate.clone();
-      onWeekChanged && onWeekChanged(visStart, visEnd);
+      updateMonthYear && updateMonthYear(visStart, visEnd);
     }
 
-    // Always update weekstart/end for WeekSelectors.
-    updateMonthYear && updateMonthYear(visibleStartDate, visibleEndDate);
-
-    if (visibleStartIndex === 0) {
-      this.shiftDaysBackward(visibleStartDate);
-    } else {
-      const minEndOffset = numDays - numVisibleItems;
-      if (minEndOffset > numVisibleItems) {
-        for (let a of all) {
-          if (a > minEndOffset) {
-            this.shiftDaysForward(visibleStartDate);
-            break;
-          }
-        }
-      }
-    }
     this.setState({
       visibleStartDate,
       visibleEndDate,
@@ -289,8 +300,28 @@ export default class CalendarScroller extends Component {
   };
 
   onScrollEnd = () => {
-    const { onWeekScrollEnd } = this.props;
-    const { visibleStartDate, visibleEndDate, prevEndDate } = this.state;
+    const { onWeekScrollEnd, onWeekChanged } = this.props;
+    const { visibleStartDate, visibleEndDate, prevEndDate, prevStartDate, visibleStartIndex } = this.state;
+
+    // Fire onWeekChanged once per completed scroll when week actually changed
+    if (
+      onWeekChanged &&
+      visibleStartDate &&
+      (!prevStartDate || !visibleStartDate.isSame(prevStartDate, 'week'))
+    ) {
+      onWeekChanged(visibleStartDate.clone(), visibleEndDate.clone());
+    }
+
+    // Safety: ensure first visible item is Sunday
+    const dow = this.props.useIsoWeekday
+      ? (visibleStartDate.isoWeekday() + 6) % 7 // Mon=0
+      : visibleStartDate.day(); // Sun=0
+    if (dow !== 0 && visibleStartIndex != null) {
+      const correctedIdx = visibleStartIndex - dow;
+      if (correctedIdx >= 0) {
+        this.rlv?.scrollToIndex(correctedIdx, false);
+      }
+    }
 
     if (onWeekScrollEnd && visibleStartDate && visibleEndDate) {
       if (!visibleEndDate.isSame(prevEndDate, "day")) {
@@ -351,10 +382,11 @@ export default class CalendarScroller extends Component {
       return null;
     }
 
+    const daysInWeekRender = this.props.renderDayParams?.numDaysInWeek || 7;
     const pagingProps = this.props.pagingEnabled
       ? {
           decelerationRate: 0,
-          snapToInterval: this.state.itemWidth * this.state.numVisibleItems,
+          snapToInterval: this.state.itemWidth * daysInWeekRender,
         }
       : {};
 
