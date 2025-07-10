@@ -247,6 +247,18 @@ export default class CalendarScroller extends Component {
 
   // Track which dates are visible.
   onVisibleIndicesChanged = (all, now, notNow) => {
+    /**
+     * Fix: Previously we used `all[0]` directly. If the first few pixels of the
+     * previous week's Sat/Sun were visible, `visibleStartDate` became the week
+     * before the intended one, so the header and callbacks lagged by a week.
+     *
+     * Strategy
+     * 1. Prefer the first visible index that corresponds to the *start of a
+     *    week* (Sun for normal, Mon for ISO calendar).
+     * 2. If none are found, fall back to the first *fully* visible index
+     *    supplied by `now[0]` (indices that became visible during this frame).
+     * 3. Final fallback is the previous behaviour (`all[0]`).
+     */
     const {
       data,
       numDays,
@@ -254,14 +266,38 @@ export default class CalendarScroller extends Component {
       visibleStartDate: _visStartDate,
       visibleEndDate: _visEndDate,
     } = this.state;
-    const visibleStartIndex = all[0];
+
+    if (!data || data.length === 0) {
+      return;
+    }
+
+    const getDow = (date) =>
+      this.props.useIsoWeekday
+        ? (date.isoWeekday() + 6) % 7 // Mon = 0 when ISO
+        : date.day(); // Sun = 0 when DOW
+
+    // 1. First visible item that is a week start
+    let visibleStartIndex = all.find((idx) => getDow(data[idx].date) === 0);
+
+    // 2. Fall back to first *fully* visible item (now[0])
+    if (visibleStartIndex == null && now && now.length) {
+      visibleStartIndex = now[0];
+    }
+
+    // 3. Final fallback
+    if (visibleStartIndex == null) {
+      visibleStartIndex = all[0] ?? 0;
+    }
+
     const visibleStartDate = data[visibleStartIndex]
       ? data[visibleStartIndex].date
       : dayjs();
+
     const visibleEndIndex = Math.min(
       visibleStartIndex + numVisibleItems - 1,
       data.length - 1
     );
+
     const visibleEndDate = data[visibleEndIndex]
       ? data[visibleEndIndex].date
       : dayjs();
