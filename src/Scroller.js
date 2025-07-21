@@ -161,9 +161,43 @@ export default class CalendarScroller extends Component {
 
   // Scroll to given date, and check against min and max date if available.
   scrollToDate = (date) => {
-    let targetDate = this.props.useIsoWeekday
-      ? dayjs(date).isoWeekday(1)
-      : dayjs(date).day(0).startOf('day');
+    let targetDate;
+    const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
+    const is2WeekView = daysInWeek === 14;
+    
+    if (this.props.useIsoWeekday) {
+      // For ISO weekday, start on Monday
+      targetDate = dayjs(date).isoWeekday(1);
+      
+      // For 2-week view, we need to find the correct start of the 2-week period
+      if (is2WeekView) {
+        // Determine if we're in the first or second week of a 2-week period
+        const weekNumber = targetDate.isoWeek();
+        const isEvenWeek = weekNumber % 2 === 0;
+        
+        // Adjust to the start of the 2-week period
+        if (isEvenWeek) {
+          targetDate = targetDate.subtract(1, 'week');
+        }
+      }
+    } else {
+      // For regular week, start on Sunday
+      targetDate = dayjs(date).day(0).startOf('day');
+      
+      // For 2-week view, find the correct start of the 2-week period
+      if (is2WeekView) {
+        // Calculate the week number (0-based from a reference date)
+        const startOfYear = dayjs(date).startOf('year');
+        const dayOfYear = targetDate.diff(startOfYear, 'days');
+        const weekNumber = Math.floor(dayOfYear / 7);
+        
+        // Adjust to the start of the 2-week period
+        if (weekNumber % 2 === 1) {
+          targetDate = targetDate.subtract(1, 'week');
+        }
+      }
+    }
+
     const { minDate, maxDate } = this.props;
 
     // Falls back to min or max date when the given date exceeds the available dates
@@ -185,7 +219,8 @@ export default class CalendarScroller extends Component {
   shiftDaysForward = (visibleStartDate = this.state.visibleStartDate) => {
     const prevVisStart = visibleStartDate.clone();
     const baseChunk = Math.floor(this.state.numDays / 3);
-    const weekChunk = Math.max(7, baseChunk - (baseChunk % 7));
+    const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
+    const weekChunk = Math.max(daysInWeek, baseChunk - (baseChunk % daysInWeek));
     const newStartDate = prevVisStart.clone().subtract(weekChunk, "days");
     this.updateDays(prevVisStart, newStartDate);
   };
@@ -194,7 +229,8 @@ export default class CalendarScroller extends Component {
   shiftDaysBackward = (visibleStartDate) => {
     const prevVisStart = visibleStartDate.clone();
     const baseChunk = Math.floor((this.state.numDays * 2) / 3);
-    const weekChunk = Math.max(7, baseChunk - (baseChunk % 7));
+    const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
+    const weekChunk = Math.max(daysInWeek, baseChunk - (baseChunk % daysInWeek));
     const newStartDate = prevVisStart.clone().subtract(weekChunk, "days");
     this.updateDays(prevVisStart, newStartDate);
   };
@@ -271,13 +307,43 @@ export default class CalendarScroller extends Component {
       return;
     }
 
-    const getDow = (date) =>
-      this.props.useIsoWeekday
-        ? (date.isoWeekday() + 6) % 7 // Mon = 0 when ISO
-        : date.day(); // Sun = 0 when DOW
+    const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
+    const is2WeekView = daysInWeek === 14;
 
-    // 1. First visible item that is a week start
-    let visibleStartIndex = all.find((idx) => getDow(data[idx].date) === 0);
+    const getDow = (date) => {
+      if (this.props.useIsoWeekday) {
+        return (date.isoWeekday() + 6) % 7; // Mon = 0 when ISO
+      } else {
+        return date.day(); // Sun = 0 when DOW
+      }
+    };
+
+    const isStartOfPeriod = (date) => {
+      const dow = getDow(date);
+      
+      if (is2WeekView) {
+        // For 2-week view, we need to check if it's the start of a 2-week period
+        if (dow !== 0) return false;
+        
+        if (this.props.useIsoWeekday) {
+          // For ISO weekday, check if the week number is odd
+          const weekNumber = date.isoWeek();
+          return weekNumber % 2 === 1;
+        } else {
+          // For regular week, calculate the week number
+          const startOfYear = date.startOf('year');
+          const dayOfYear = date.diff(startOfYear, 'days');
+          const weekNumber = Math.floor(dayOfYear / 7);
+          return weekNumber % 2 === 0;
+        }
+      } else {
+        // For regular week view, just check if it's the first day of the week
+        return dow === 0;
+      }
+    };
+
+    // 1. First visible item that is a start of period (week or 2-week)
+    let visibleStartIndex = all.find((idx) => data[idx] && isStartOfPeriod(data[idx].date));
 
     // 2. Fall back to first *fully* visible item (now[0])
     if (visibleStartIndex == null && now && now.length) {
@@ -304,13 +370,13 @@ export default class CalendarScroller extends Component {
 
     const { updateMonthYear } = this.props;
 
-    // Fire month/year update on both week and month changes.  This is
-    // necessary for the header and onWeekChanged updates.
+    // Fire month/year update on both period and month changes.
+    // This is necessary for the header and onWeekChanged updates.
     if (
       !_visStartDate ||
       !_visEndDate ||
-      !visibleStartDate.isSame(_visStartDate, "week") ||
-      !visibleEndDate.isSame(_visEndDate, "week") ||
+      !visibleStartDate.isSame(_visStartDate, is2WeekView ? "month" : "week") ||
+      !visibleEndDate.isSame(_visEndDate, is2WeekView ? "month" : "week") ||
       !visibleStartDate.isSame(_visStartDate, "month") ||
       !visibleEndDate.isSame(_visEndDate, "month")
     ) {
@@ -338,20 +404,23 @@ export default class CalendarScroller extends Component {
   onScrollEnd = () => {
     const { onWeekScrollEnd, onWeekChanged } = this.props;
     const { visibleStartDate, visibleEndDate, prevEndDate, prevStartDate, visibleStartIndex } = this.state;
+    const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
+    const is2WeekView = daysInWeek === 14;
 
-    // Fire onWeekChanged once per completed scroll when week actually changed
+    // Fire onWeekChanged once per completed scroll when week/period actually changed
     if (
       onWeekChanged &&
       visibleStartDate &&
-      (!prevStartDate || !visibleStartDate.isSame(prevStartDate, 'week'))
+      (!prevStartDate || !visibleStartDate.isSame(prevStartDate, is2WeekView ? 'month' : 'week'))
     ) {
       onWeekChanged(visibleStartDate.clone(), visibleEndDate.clone());
     }
 
-    // Safety: ensure first visible item is Sunday
+    // Safety: ensure first visible item is aligned with period start
     const dow = this.props.useIsoWeekday
       ? (visibleStartDate.isoWeekday() + 6) % 7 // Mon=0
       : visibleStartDate.day(); // Sun=0
+    
     if (dow !== 0 && visibleStartIndex != null) {
       const correctedIdx = visibleStartIndex - dow;
       if (correctedIdx >= 0) {
