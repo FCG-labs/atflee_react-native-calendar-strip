@@ -52,7 +52,8 @@ export default class CalendarScroller extends Component {
       const layoutProvider = new LayoutProvider(
         (index) => 0, // only 1 view type
         (type, dim) => {
-          dim.width = itemWidth;
+          // Use dynamic itemWidth from state if available, fallback to calculated
+          dim.width = this.state?.itemWidth || itemWidth;
           dim.height = itemHeight;
         }
       );
@@ -417,13 +418,59 @@ export default class CalendarScroller extends Component {
     }
 
     // Safety: ensure first visible item is aligned with period start
-    const dow = this.props.useIsoWeekday
-      ? (visibleStartDate.isoWeekday() + 6) % 7 // Mon=0
-      : visibleStartDate.day(); // Sun=0
-    
-    if (dow !== 0 && visibleStartIndex != null) {
-      const correctedIdx = visibleStartIndex - dow;
-      if (correctedIdx >= 0) {
+    if (visibleStartDate && visibleStartIndex != null) {
+      let shouldAlign = false;
+      let correctedIdx = visibleStartIndex;
+      
+      if (daysInWeek === 7) {
+        // For 1-week view: align to week start (Sun or Mon)
+        const dow = this.props.useIsoWeekday
+          ? (visibleStartDate.isoWeekday() + 6) % 7 // Mon=0
+          : visibleStartDate.day(); // Sun=0
+        
+        if (dow !== 0) {
+          correctedIdx = visibleStartIndex - dow;
+          shouldAlign = true;
+        }
+      } else if (daysInWeek === 14) {
+        // For 2-week view: align to 2-week period start
+        const dow = this.props.useIsoWeekday
+          ? (visibleStartDate.isoWeekday() + 6) % 7 // Mon=0
+          : visibleStartDate.day(); // Sun=0
+        
+        if (dow !== 0) {
+          // First, align to week start
+          let weekAlignedIdx = visibleStartIndex - dow;
+          
+          // Then check if we need to align to 2-week period start
+          if (weekAlignedIdx >= 0 && this.state.data[weekAlignedIdx]) {
+            const weekStartDate = this.state.data[weekAlignedIdx].date;
+            
+            if (this.props.useIsoWeekday) {
+              const weekNumber = weekStartDate.isoWeek();
+              if (weekNumber % 2 === 0) {
+                // Even week, go back one more week to odd week start
+                correctedIdx = weekAlignedIdx - 7;
+              } else {
+                correctedIdx = weekAlignedIdx;
+              }
+            } else {
+              const startOfYear = weekStartDate.startOf('year');
+              const dayOfYear = weekStartDate.diff(startOfYear, 'days');
+              const weekNumber = Math.floor(dayOfYear / 7);
+              if (weekNumber % 2 === 1) {
+                // Odd week, go back one more week to even week start
+                correctedIdx = weekAlignedIdx - 7;
+              } else {
+                correctedIdx = weekAlignedIdx;
+              }
+            }
+            shouldAlign = true;
+          }
+        }
+      }
+      
+      if (shouldAlign && correctedIdx >= 0) {
         this.rlv?.scrollToIndex(correctedIdx, false);
       }
     }
@@ -467,8 +514,19 @@ export default class CalendarScroller extends Component {
 
   onLayout = (event) => {
     let width = event.nativeEvent.layout.width;
+    const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
+    
+    // For scrollable calendar, we want to show exactly numDaysInWeek items
+    // Adjust itemWidth to fit exactly numDaysInWeek items in the available width
+    const adjustedItemWidth = width / daysInWeek;
+    
+    // Update layout provider with new itemWidth
+    const updatedLayout = this.updateLayout(this.props.renderDayParams);
+    
     this.setState({
-      numVisibleItems: Math.round(width / this.state.itemWidth),
+      numVisibleItems: daysInWeek,
+      itemWidth: adjustedItemWidth,
+      layoutProvider: updatedLayout.layoutProvider,
     });
   };
 
@@ -492,6 +550,7 @@ export default class CalendarScroller extends Component {
       ? {
           decelerationRate: 0,
           snapToInterval: this.state.itemWidth * daysInWeekRender,
+          pagingEnabled: true,
         }
       : {};
 
