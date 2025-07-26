@@ -39,9 +39,11 @@ export default class CalendarScroller extends Component {
     this.timeoutResetPositionId = null;
 
     this.updateLayout = (renderDayParams) => {
-      const itemHeight = renderDayParams.height;
+      const defaultSize = 50;
+      const itemHeight = renderDayParams.height || defaultSize;
       const itemWidth =
-        renderDayParams.width + renderDayParams.marginHorizontal * 2;
+        (renderDayParams.width || defaultSize) +
+        renderDayParams.marginHorizontal * 2;
       return { itemHeight, itemWidth };
     };
 
@@ -521,11 +523,7 @@ export default class CalendarScroller extends Component {
   };
 
   render() {
-    if (
-      !this.state.data ||
-      this.state.numDays === 0 ||
-      !this.state.itemHeight
-    ) {
+    if (!this.state.data || this.state.numDays === 0) {
       return null;
     }
 
@@ -540,7 +538,7 @@ export default class CalendarScroller extends Component {
 
     return (
       <View
-        style={{ height: this.state.itemHeight, flex: 1 }}
+        style={{ height: this.state.itemHeight || 50, flex: 1 }}
         onLayout={this.onLayout}
       >
         <FlashList
