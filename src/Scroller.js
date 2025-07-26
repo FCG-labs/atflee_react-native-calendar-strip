@@ -257,17 +257,10 @@ export default class CalendarScroller extends Component {
       data.push({ date });
     }
     
-    console.log('생성된 data.length:', data.length);
-    console.log('data 범위:', data.length > 0 ? `${data[0].date.format('YYYY-MM-DD')} ~ ${data[data.length-1].date.format('YYYY-MM-DD')}` : 'empty');
-    
     // Prevent reducing range when the minDate - maxDate range is small.
     if (data.length < this.props.maxSimultaneousDays) {
-      console.log('❌ updateDays 중단: data.length < maxSimultaneousDays');
-      console.log(`data.length(${data.length}) < maxSimultaneousDays(${this.props.maxSimultaneousDays})`);
       return;
     }
-    
-    console.log('✅ updateDays 계속 진행');
     // Scroll to previous date
     for (let i = 0; i < data.length; i++) {
       if (data[i].date.isSame(prevVisStart, "day")) {
@@ -391,6 +384,21 @@ export default class CalendarScroller extends Component {
       const visStart = visibleStartDate && visibleStartDate.clone();
       const visEnd = visibleEndDate && visibleEndDate.clone();
       updateMonthYear && updateMonthYear(visStart, visEnd);
+    }
+
+    // Shift the buffered range when scrolling past either end
+    if (visibleStartIndex === 0) {
+      this.shiftDaysBackward(visibleStartDate);
+    } else {
+      const minEndOffset = numDays - numVisibleItems;
+      if (minEndOffset > numVisibleItems) {
+        for (let a of all) {
+          if (a > minEndOffset) {
+            this.shiftDaysForward(visibleStartDate);
+            break;
+          }
+        }
+      }
     }
 
     this.setState({

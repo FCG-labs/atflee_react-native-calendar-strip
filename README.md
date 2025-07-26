@@ -192,6 +192,7 @@ AppRegistry.registerComponent('Example', () => Example);
 | **`numDaysInWeek`**  | Number of days shown in week. Applicable only when scrollable is false.                                                                                            | Number   | **`7`**    |
 | **`scrollable`**     | Dates are scrollable if true.                                                                                                                                      | Bool     | **`False`**|
 | **`scrollerPaging`** | Dates are scrollable as a page (7 days) if true (Only works with `scrollable` set to true).                                                                        | Bool     | **`False`**|
+| **`weekBuffer`**     | Number of weeks kept in memory when scrollable. The visible week plus this many weeks before and after will be rendered. Works with custom `numDaysInWeek`. | Number | **`3`** |
 | **`startingDate`**   | Date to be used for centering the calendar/showing the week based on that date. It is internally wrapped by `dayjs` so it accepts both `Date` and `dayjs Date`.  | Any      |
 | **`selectedDate`**   | Date to be used as pre selected Date. It is internally wrapped by `dayjs` so it accepts both `Date` and `dayjs Date`.                                            | Any      |
 | **`onDateSelected`** | Function to be used as a callback when a date is selected. Receives param `date` dayjs date.                                                                      | Function |
