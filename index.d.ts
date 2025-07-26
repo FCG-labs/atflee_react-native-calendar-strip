@@ -1,162 +1,329 @@
-import { Component, ReactNode, ComponentProps, RefObject } from "react";
+import { ReactNode, RefObject } from "react";
 import { Dayjs } from "dayjs";
 import {
   StyleProp,
   ViewStyle,
-  TextStyle,
-  GestureResponderEvent
+  TextStyle
 } from "react-native";
-import { RecyclerListView } from 'recyclerlistview';
 
-interface IDaySelectionAnimationBorder {
-  type: "border";
-  duration: number;
-  borderWidth: number;
-  borderHighlightColor: string;
-  animType?: any;
-  animUpdateType?: any;
-  animProperty?: any;
-  animSpringDamping?: any;
+/**
+ * Props for custom day component - exact match to what's passed in CalendarDateItem.js
+ */
+export interface IDayComponentProps {
+  /**
+   * The date object for this day
+   */
+  date: Date;
+  
+  /**
+   * Whether this date is currently selected
+   */
+  isActive: boolean;
+  
+  /**
+   * Whether this date is today
+   */
+  isToday: boolean;
+  
+  /**
+   * Whether this date is a weekend day
+   */
+  isWeekend: boolean;
+  
+  /**
+   * Whether this date is disabled (outside of min/max range)
+   */
+  isDisabled?: boolean;
+  
+  /**
+   * If this date has a marker, it will be provided here
+   */
+  markedDate?: any;
+  
+  /**
+   * Callback to select this date
+   */
+  onDateSelected: () => void;
 }
 
-interface IDaySelectionAnimationBackground {
-  type: "background";
-  duration: number;
-  highlightColor: string;
-  animType?: any;
-  animUpdateType?: any;
-  animProperty?: any;
-  animSpringDamping?: any;
+/**
+ * Date range type
+ */
+export interface DateRange {
+  start: Date | Dayjs;
+  end: Date | Dayjs;
 }
 
-interface IDayComponentProps {
-  date: Dayjs;
-  marking?: any;
-  selected?: boolean;
-  enabled: boolean;
-  showDayName?: boolean;
-  showDayNumber?: boolean;
-  onDateSelected?: (event: GestureResponderEvent) => void;
-  calendarColor?: string;
-  dateNameStyle?: string;
-  dateNumberStyle?: string;
-  dayContainerStyle?: StyleProp<ViewStyle>;
-  weekendDateNameStyle?: TextStyle;
-  weekendDateNumberStyle?: TextStyle;
-  highlightDateContainerStyle?: StyleProp<ViewStyle>;
-  highlightDateNameStyle?: TextStyle;
-  highlightDateNumberStyle?: TextStyle;
-  disabledDateNameStyle?: TextStyle;
-  disabledDateNumberStyle?: TextStyle;
-  styleWeekend?: boolean;
-  daySelectionAnimation?: TDaySelectionAnimation;
-  customStyle?: ViewStyle;
-  size: number;
-  allowDayTextScaling?: boolean;
-  markedDatesStyle?: TextStyle;
-  markedDates?: any[] | ((date: Dayjs) => void);
-  upperCaseDays?: boolean;
+/**
+ * Marker date format used in the markedDates array
+ */
+export interface MarkedDate {
+  /** Date to mark - can be Date object, Dayjs object, or date string */
+  date: Date | Dayjs | string;
+  /** Optional dots to display for the marker */
+  dots?: Array<{color?: string; [key: string]: any}>;
+  /** Any additional custom properties */
+  [key: string]: any;
 }
 
-type TDaySelectionAnimation =
-  | IDaySelectionAnimationBorder
-  | IDaySelectionAnimationBackground;
-
-type TDateRange = {
-  start: Dayjs;
-  end: Dayjs;
-};
-
-interface CalendarStripProps {
-  style: StyleProp<ViewStyle>;
-  innerStyle?: StyleProp<ViewStyle>;
-  calendarColor?: string;
-
-  numDaysInWeek?: number;
-  scrollable?: boolean;
-  scrollerPaging?: boolean;
-  externalScrollView?: ComponentProps<typeof RecyclerListView>['externalScrollView'];
-  startingDate?: Dayjs | Date;
-  weekBuffer?: number;
-  selectedDate?: Dayjs | Date;
-  onDateSelected?: ((date: Dayjs) => void);
-  onWeekChanged?: ((start: Dayjs, end: Dayjs) => void);
-  onWeekScrollStart?: ((start: Dayjs, end: Dayjs) => void);
-  onWeekScrollEnd?: ((start: Dayjs, end: Dayjs) => void);
-  onHeaderSelected?: ((dates: {weekStartDate: Dayjs, weekEndDate: Dayjs}) => void);
-  updateWeek?: boolean;
+/**
+ * CalendarStrip component props
+ */
+export interface CalendarStripProps {
+  // Calendar configuration
+  /**
+   * Initial selected date
+   */
+  selectedDate?: Date | Dayjs;
+  
+  /**
+   * Date to start the calendar at
+   */
+  startingDate?: Date | Dayjs;
+  
+  /**
+   * Minimum selectable date
+   */
+  minDate?: Date | Dayjs;
+  
+  /**
+   * Maximum selectable date
+   */
+  maxDate?: Date | Dayjs;
+  
+  /**
+   * Use ISO weekday (Monday as first day)
+   */
   useIsoWeekday?: boolean;
-  minDate?: Dayjs | Date;
-  maxDate?: Dayjs | Date;
-  datesWhitelist?: TDateRange[] | ((date: Dayjs) => void);
-  datesBlacklist?: TDateRange[] | ((date: Dayjs) => void);
-  markedDates?: any[] | ((date: Dayjs) => void);
-  scrollToOnSetSelectedDate?: boolean;
-
+  
+  /**
+   * Number of days to show in a week
+   * @default 7
+   */
+  numDaysInWeek?: number;
+  
+  /**
+   * Whether the calendar is scrollable
+   */
+  scrollable?: boolean;
+  
+  /**
+   * Whether to use paged scrolling
+   */
+  scrollerPaging?: boolean;
+  
+  // Header configuration
+  /**
+   * Whether to show the month header
+   * @default true
+   */
   showMonth?: boolean;
-  showDayName?: boolean;
-  showDayNumber?: boolean;
-  showDate?: boolean;
-
-  leftSelector?: any;
-  rightSelector?: any;
-  iconLeft?: any;
-  iconRight?: any;
-  iconStyle?: any;
-  iconLeftStyle?: any;
-  iconRightStyle?: any;
-  iconContainer?: any;
-
-  maxDayComponentSize?: number;
-  minDayComponentSize?: number;
-  responsiveSizingOffset?: number;
-  dayComponentHeight?: number;
-
-  calendarHeaderContainerStyle?: StyleProp<ViewStyle>;
-  calendarHeaderStyle?: StyleProp<TextStyle>;
+  
+  /**
+   * Format string for the calendar header
+   */
   calendarHeaderFormat?: string;
-  calendarHeaderPosition?: "below" | "above";
-
-  calendarAnimation?: {
-    duration: number;
-    type: "sequence" | "parallel";
-  };
-  daySelectionAnimation?: TDaySelectionAnimation;
-
-  customDatesStyles?: any[] | ((date: Dayjs) => void);
-
-  dayComponent?: (props: IDayComponentProps) => ReactNode;
-
-  dayContainerStyle?: StyleProp<ViewStyle>;
+  
+  /**
+   * Position of the calendar header
+   */
+  calendarHeaderPosition?: "left" | "center" | "right";
+  
+  /**
+   * Style for the calendar header
+   */
+  calendarHeaderStyle?: StyleProp<TextStyle>;
+  
+  // Styling
+  /**
+   * Container style for the calendar
+   */
+  style?: StyleProp<ViewStyle>;
+  
+  /**
+   * Background color of the calendar
+   */
+  calendarColor?: string;
+  
+  /**
+   * Background color for selected date
+   */
+  highlightColor?: string;
+  
+  /**
+   * Style for the day name
+   */
   dateNameStyle?: StyleProp<TextStyle>;
+  
+  /**
+   * Style for the day number
+   */
   dateNumberStyle?: StyleProp<TextStyle>;
-  dayContainerStyle?: StyleProp<ViewStyle>;
-  weekendDateNameStyle?: StyleProp<TextStyle>;
-  weekendDateNumberStyle?: StyleProp<TextStyle>;
-  highlightDateContainerStyle?: StyleProp<ViewStyle>;
+  
+  /**
+   * Style for the day name when selected
+   */
   highlightDateNameStyle?: StyleProp<TextStyle>;
+  
+  /**
+   * Style for the day number when selected
+   */
   highlightDateNumberStyle?: StyleProp<TextStyle>;
-  highlightDateNumberContainerStyle?: StyleProp<ViewStyle>;
-  disabledDateNameStyle?: StyleProp<TextStyle>;
-  disabledDateNumberStyle?: StyleProp<TextStyle>;
-  markedDatesStyle?: StyleProp<TextStyle>;
+  
+  /**
+   * Style for the day container
+   */
+  dayContainerStyle?: StyleProp<ViewStyle>;
+  
+  /**
+   * Opacity for disabled dates
+   */
   disabledDateOpacity?: number;
+  
+  /**
+   * Whether to apply different styling to weekend days
+   */
   styleWeekend?: boolean;
+  
+  // Display options
+  /**
+   * Whether to show day names
+   * @default true
+   */
+  showDayName?: boolean;
+  
+  /**
+   * Whether to show day numbers
+   * @default true
+   */
+  showDayNumber?: boolean;
+  
+  /**
+   * Whether to display day names in uppercase
+   */
   upperCaseDays?: boolean;
-
-  locale?: object;
-  shouldAllowFontScaling?: boolean;
-  useNativeDriver?: boolean;
-
-  headerText?: string;
-
-  ref?: RefObject<any>;
+  
+  /**
+   * Whether to allow text scaling on days
+   */
+  allowDayTextScaling?: boolean;
+  
+  // Events and callbacks
+  /**
+   * Callback when a date is selected
+   * @param date The selected date
+   */
+  onDateSelected?: (date: Date | Dayjs) => void;
+  
+  /**
+   * Callback when the visible week changes
+   * @param startDate First day of the new visible week
+   * @param endDate Last day of the new visible week
+   */
+  onWeekChanged?: (startDate: Date | Dayjs, endDate: Date | Dayjs) => void;
+  
+  /**
+   * Callback when the header is selected
+   */
+  onHeaderSelected?: () => void;
+  
+  /**
+   * Callback to update month/year in parent component
+   */
+  updateMonthYear?: (month: string, year: string) => void;
+  
+  // Custom components
+  /**
+   * Custom day component renderer
+   */
+  dayComponent?: (props: IDayComponentProps) => ReactNode;
+  
+  /**
+   * Custom left selector component
+   */
+  leftSelector?: ReactNode;
+  
+  /**
+   * Custom right selector component
+   */
+  rightSelector?: ReactNode;
+  
+  // Markers
+  /**
+   * Array of dates to mark
+   */
+  markedDates?: MarkedDate[];
+  
+  /**
+   * Style for the marked dates
+   */
+  markedDatesStyle?: StyleProp<ViewStyle>;
+  
+  /**
+   * Custom marker component renderer
+   */
+  markerComponent?: (props: { date: Date; dots: any[] }) => ReactNode;
+  
+  // Reference
+  /**
+   * Ref to access calendar methods
+   */
+  calendarRef?: RefObject<CalendarStripMethods>;
 }
 
-export default class ReactNativeCalendarStrip extends Component<CalendarStripProps> {
-  getSelectedDate: () => undefined | Date | string;
-  setSelectedDate: (date: Dayjs | string) => void;
-  getNextWeek: () => void;
-  getPreviousWeek: () => void;
-  updateWeekView: (date: Dayjs | string) => void;
+/**
+ * Methods exposed by the CalendarStrip component through refs
+ * These match exactly what's implemented in useImperativeHandle in CalendarStrip.js
+ */
+export interface CalendarStripMethods {
+  /**
+   * Jump to specific date
+   * @param date The date to jump to
+   */
+  jumpToDate(date: Date | Dayjs): void;
+  
+  /**
+   * Scroll to specific date (alias for jumpToDate)
+   * @param date The date to scroll to
+   */
+  scrollToDate(date: Date | Dayjs): void;
+  
+  /**
+   * Get the currently selected date
+   * @returns Native Date object of the selected date
+   */
+  getSelectedDate(): Date;
+  
+  /**
+   * Navigate to the next week
+   */
+  goToNextWeek(): void;
+  
+  /**
+   * Navigate to the previous week
+   */
+  goToPreviousWeek(): void;
 }
+
+/**
+ * CalendarStrip component
+ * A high-performance calendar strip with infinite bi-directional scrolling
+ * 
+ * @example
+ * // Basic usage
+ * <CalendarStrip
+ *   selectedDate={new Date()}
+ *   onDateSelected={(date) => console.log('Selected:', date)}
+ *   markedDates={[
+ *     { date: new Date(), dots: [{ color: 'red' }] }
+ *   ]}
+ * />
+ *
+ * @example
+ * // With ref methods
+ * const calendarRef = useRef<CalendarStripMethods>(null);
+ * // Later: calendarRef.current?.jumpToDate(new Date());
+ */
+declare function CalendarStrip(props: CalendarStripProps): JSX.Element;
+
+export default CalendarStrip;

@@ -85,7 +85,9 @@ const CalendarStrip = ({
   const controllerRef = useRef(new CalendarController({
     initialDate: selectedDate || startingDate || new Date(),
     useIsoWeekday,
-    numDaysInWeek: numDaysInWeek || 7
+    numDaysInWeek,
+    minDate,
+    maxDate
   }));
   const controller = controllerRef.current;
   
@@ -151,13 +153,22 @@ const CalendarStrip = ({
   
   // Handle date selection
   const handleDateSelection = useCallback(date => {
+    // Check if date is within min/max range
+    const dateObj = dayjs(date);
+    if (minDate && dateObj.isBefore(dayjs(minDate), 'day')) {
+      return;
+    }
+    if (maxDate && dateObj.isAfter(dayjs(maxDate), 'day')) {
+      return;
+    }
+
     controller.selectDate(date);
     setActiveDate(controller.getSelectedDateNative());
     
     if (onDateSelected) {
       onDateSelected(controller.getSelectedDateNative());
     }
-  }, [onDateSelected]);
+  }, [onDateSelected, minDate, maxDate]);
   
   // Handle week changed event
   const handleWeekChanged = useCallback((startDate, endDate) => {
@@ -225,12 +236,20 @@ const CalendarStrip = ({
             highlightDateNameStyle={highlightDateNameStyle}
             highlightDateNumberStyle={highlightDateNumberStyle}
             dayContainerStyle={dayContainerStyle}
+            highlightColor={highlightColor}
+            calendarColor={calendarColor}
             disabledDateOpacity={disabledDateOpacity}
             allowDayTextScaling={allowDayTextScaling}
             dayComponent={dayComponent}
             markedDates={markedDates}
+            markedDatesStyle={markedDatesStyle}
             markerComponent={markerComponent}
             activeDate={activeDate}
+            styleWeekend={styleWeekend}
+            isDisabled={
+              (minDate && day.date.isBefore(dayjs(minDate), 'day')) ||
+              (maxDate && day.date.isAfter(dayjs(maxDate), 'day'))
+            }
           />
         ))}
       </View>
@@ -250,8 +269,14 @@ const CalendarStrip = ({
     allowDayTextScaling,
     dayComponent,
     markedDates,
+    markedDatesStyle,
     markerComponent,
-    handleDateSelection
+    handleDateSelection,
+    calendarColor,
+    highlightColor,
+    styleWeekend,
+    minDate,
+    maxDate
   ]);
   
   // Key extractor for FlatList
@@ -309,6 +334,7 @@ const CalendarStrip = ({
               }
             });
           }}
+          contentContainerStyle={calendarColor ? { backgroundColor: calendarColor } : undefined}
           style={styles.flatList}
         />
         

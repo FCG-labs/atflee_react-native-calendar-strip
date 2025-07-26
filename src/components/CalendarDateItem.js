@@ -30,9 +30,14 @@ const CalendarDateItem = memo(({
   dayComponent,
   onDateSelected,
   markedDates,
+  markedDatesStyle,
   markerComponent,
   dayContainerStyle,
-  activeDate
+  activeDate,
+  highlightColor,
+  calendarColor,
+  styleWeekend,
+  isDisabled
 }) => {
   // Generate accessibility label for the date
   const accessibilityLabel = dayjs(date).format('dddd, MMMM D, YYYY');
@@ -42,23 +47,33 @@ const CalendarDateItem = memo(({
     dayjs(markedDate.date).isSame(dayjs(date), 'day')
   );
   
+  // Apply custom styling for weekend if enabled
+  const isStyledWeekend = styleWeekend && isWeekend;
+
   // Determine styles based on active/today state
   const containerStyle = [
     styles.dateContainer,
-    isActive ? styles.activeDate : null,
-    dayContainerStyle
+    isActive ? {
+      backgroundColor: highlightColor || styles.activeDate.backgroundColor
+    } : null,
+    dayContainerStyle,
+    calendarColor ? { backgroundColor: isActive ? highlightColor : calendarColor } : null
   ];
   
   const dayStyle = [
     styles.dayText,
     dayTextStyle,
-    isActive ? highlightDateNameStyle : null
+    isActive ? highlightDateNameStyle : null,
+    isStyledWeekend && !isActive ? { color: '#999' } : null,
+    isDisabled ? { opacity: disabledDateOpacity } : null
   ];
   
   const dateStyle = [
     styles.dateText,
     dateNumberStyle,
-    isActive ? highlightDateNumberStyle : null
+    isActive ? highlightDateNumberStyle : null,
+    isStyledWeekend && !isActive ? { color: '#999' } : null,
+    isDisabled ? { opacity: disabledDateOpacity } : null
   ];
   
   // Use custom day component if provided, otherwise render default
@@ -68,15 +83,18 @@ const CalendarDateItem = memo(({
       isActive,
       isToday,
       isWeekend,
-      onDateSelected: () => onDateSelected(date)
+      isDisabled,
+      markedDate: hasMarker,
+      onDateSelected: () => isDisabled ? null : onDateSelected(date)
     });
   }
   
   return (
     <TouchableOpacity
       style={containerStyle}
-      onPress={() => onDateSelected(date)}
-      activeOpacity={activeOpacity}
+      onPress={() => isDisabled ? null : onDateSelected(date)}
+      activeOpacity={isDisabled ? 1 : activeOpacity}
+      disabled={isDisabled}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
     >
@@ -116,7 +134,8 @@ const CalendarDateItem = memo(({
           hasMarker && (
             <View style={[
               styles.marker,
-              { backgroundColor: hasMarker.color || '#4296F0' }
+              { backgroundColor: hasMarker.color || '#4296F0' },
+              markedDatesStyle
             ]} />
           )
         )}
@@ -182,9 +201,14 @@ CalendarDateItem.propTypes = {
   dayComponent: PropTypes.func,
   onDateSelected: PropTypes.func.isRequired,
   markedDates: PropTypes.array,
+  markedDatesStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   markerComponent: PropTypes.func,
   dayContainerStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  activeDate: PropTypes.instanceOf(Date)
+  activeDate: PropTypes.instanceOf(Date),
+  highlightColor: PropTypes.string,
+  calendarColor: PropTypes.string,
+  styleWeekend: PropTypes.bool,
+  isDisabled: PropTypes.bool
 };
 
 CalendarDateItem.defaultProps = {
