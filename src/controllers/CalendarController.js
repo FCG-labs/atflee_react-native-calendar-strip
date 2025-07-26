@@ -259,7 +259,7 @@ class CalendarController {
       // Notify listeners of the change
       this._notifyListeners();
     }
-  }
+  } 
 
   /**
    * Navigate to the previous week
