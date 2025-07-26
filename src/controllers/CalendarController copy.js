@@ -335,7 +335,6 @@ class CalendarController {
    * @param {dayjs.Dayjs} endDate - End date of visible range
    */
   updateVisibleDates(startDate, endDate) {
-    
     this._visibleStartDate = startDate;
     this._visibleEndDate = endDate;
     

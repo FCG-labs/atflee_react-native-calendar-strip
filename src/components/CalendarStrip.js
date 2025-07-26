@@ -5,8 +5,6 @@ import {
   FlatList,
   Dimensions,
   Platform,
-  LayoutAnimation,
-  UIManager
 } from 'react-native';
 import PropTypes from 'prop-types';
 import dayjs from 'dayjs';
@@ -18,10 +16,7 @@ import CalendarHeader from '../CalendarHeader';
 import CalendarController from '../controllers/CalendarController';
 import CalendarDateItem from './CalendarDateItem';
 
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+// No longer using LayoutAnimation for smoother scroll synchronization
 
 /**
  * CalendarStrip Component
@@ -81,28 +76,45 @@ const CalendarStrip = ({
   // Reference
   calendarRef
 }) => {
-  // Set up controller
-  const controllerRef = useRef(new CalendarController({
-    initialDate: selectedDate || startingDate || new Date(),
-    useIsoWeekday,
-    numDaysInWeek,
-    minDate,
-    maxDate
-  }));
-  const controller = controllerRef.current;
-  
+  // Initialize calendar controller
+  const [controller, setController] = useState(null);
+  useEffect(() => {
+    if (!controller) {
+      const newController = new CalendarController({
+        initialDate: startingDate || selectedDate,
+        minDate,
+        maxDate,
+        useIsoWeekday: useIsoWeekday !== undefined ? useIsoWeekday : false,
+        numDaysInWeek: numDaysInWeek || 7
+      });
+      
+      newController.addListener(onControllerUpdate);
+      setController(newController);
+      
+      // Forward ref to parent
+      if (calendarRef) {
+        calendarRef.current = newController;
+      }
+    }
+    
+    return () => {
+      if (controller) {
+        controller.removeListener(onControllerUpdate);
+      }
+    };
+  }, []);
+
   // FlatList reference
   const flatListRef = useRef(null);
   
   // State
-  const [currentWeek, setCurrentWeek] = useState(controller.getCurrentWeek());
-  const [weekIndex, setWeekIndex] = useState(controller.getCurrentWeekIndex());
-  const [weeks, setWeeks] = useState(controller.getWeeks());
+  const [weeks, setWeeks] = useState([]);
+  const [weekIndex, setWeekIndex] = useState(0);
+  const [prevWeeksLength, setPrevWeeksLength] = useState(0);
+  const [isInitialRender, setIsInitialRender] = useState(true);
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
-  const [visibleStartDate, setVisibleStartDate] = useState(null);
-  const [visibleEndDate, setVisibleEndDate] = useState(null);
   const [activeDate, setActiveDate] = useState(
-    controller.getSelectedDate()
+    controller ? controller.getSelectedDate() : null
   );
   
   // Handle external updates to selectedDate
@@ -115,26 +127,13 @@ const CalendarStrip = ({
   
   // Listen to controller updates
   useEffect(() => {
-    const removeListener = controller.addListener(updatedController => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      
-      setCurrentWeek(updatedController.getCurrentWeek());
-      setWeekIndex(updatedController.getCurrentWeekIndex());
-      setWeeks(updatedController.getWeeks());
-      setActiveDate(updatedController.getSelectedDate());
-      
-      // Scroll FlatList to the new week index
-      if (flatListRef.current) {
-        flatListRef.current.scrollToIndex({
-          index: updatedController.getCurrentWeekIndex(),
-          animated: true
-        });
-      }
-    });
+    if (!controller) return;
     
-    // Cleanup listener when component unmounts
-    return removeListener;
-  }, []);
+    // 초기 상태 설정
+    setWeekIndex(controller.getCurrentWeekIndex());
+    setWeeks(controller.getWeeks());
+    setActiveDate(controller.getSelectedDate());
+  }, [controller]);
   
   // Expose methods via ref
   React.useImperativeHandle(calendarRef, () => ({
@@ -144,6 +143,65 @@ const CalendarStrip = ({
     goToNextWeek: () => controller.goToNextWeek(),
     goToPreviousWeek: () => controller.goToPreviousWeek()
   }));
+  
+  // Controller update handler
+  const onControllerUpdate = useCallback(state => {
+    // 이전 주차 길이 저장
+    setPrevWeeksLength(weeks.length);
+    setWeeks(state.weeks || []);
+    setWeekIndex(state.currentWeekIndex);
+    setActiveDate(dayjs(state.selectedDate));
+    
+    // 스크롤 위치 조정
+    updateScrollPosition(state.weeks, state.currentWeekIndex, weeks.length);
+  }, [weeks.length]);
+  
+  // 스크롤 위치 업데이트 함수
+  const updateScrollPosition = useCallback((newWeeks, newIndex, oldWeeksLength) => {
+    if (!flatListRef.current || !newWeeks || newWeeks.length === 0) return;
+    
+    // 처음 렌더링 시에는 애니메이션 없이 스크롤
+    if (isInitialRender) {
+      flatListRef.current.scrollToIndex({
+        animated: false,
+        index: newIndex
+      });
+      setIsInitialRender(false);
+      return;
+    }
+    
+    // 주차가 추가된 경우
+    if (newWeeks.length > oldWeeksLength) {
+      // 앞쪽에 주차가 추가된 경우 (currentWeekIndex가 증가했다면)
+      const weekDiff = newWeeks.length - oldWeeksLength;
+      
+      if (newIndex >= weekDiff) {
+        // 스크롤 위치 유지를 위해 애니메이션 없이 이동
+        flatListRef.current.scrollToIndex({
+          animated: false,
+          index: newIndex
+        });
+      } else {
+        // 일반적인 경우
+        flatListRef.current.scrollToIndex({
+          animated: false,
+          index: newIndex
+        });
+      }
+    } else {
+      // 주차 개수에 변화가 없는 경우
+      flatListRef.current.scrollToIndex({
+        animated: false,
+        index: newIndex
+      });
+    }
+  }, [isInitialRender]);
+  
+  useEffect(() => {
+    if (flatListRef.current && weekIndex !== undefined && weeks.length > 0) {
+      updateScrollPosition(weeks, weekIndex, prevWeeksLength);
+    }
+  }, [weekIndex, weeks, prevWeeksLength, updateScrollPosition]);
   
   // Handle layout changes
   const onLayout = useCallback(event => {
@@ -172,8 +230,10 @@ const CalendarStrip = ({
   
   // Handle week changed event
   const handleWeekChanged = useCallback((startDate, endDate) => {
-    setVisibleStartDate(startDate);
-    setVisibleEndDate(endDate);
+    // Update controller
+    if (controller) {
+      controller.updateVisibleDates(startDate, endDate);
+    }
     
     if (onWeekChanged) {
       onWeekChanged(startDate, endDate);
@@ -185,7 +245,7 @@ const CalendarStrip = ({
         .add(Math.floor(numDaysInWeek / 2), 'day');
       updateMonthYear(middleDate);
     }
-  }, [onWeekChanged, updateMonthYear, numDaysInWeek]);
+  }, [controller, onWeekChanged, updateMonthYear, numDaysInWeek]);
   
   // Handle scroll events
   const onViewableItemsChanged = useCallback(({ viewableItems }) => {
@@ -321,20 +381,28 @@ const CalendarStrip = ({
           maxToRenderPerBatch={3}
           windowSize={5}
           removeClippedSubviews={Platform.OS === 'android'}
+          // extraData를 추가하여 주차 데이터가 변경될 때 확실히 리렌더링되도록 함
+          extraData={{ weeksLength: weeks.length, weekIndex }}
           onScrollToIndexFailed={info => {
             // Handle scroll to index failures gracefully
             const wait = new Promise(resolve => setTimeout(resolve, 500));
             wait.then(() => {
               if (flatListRef.current) {
+                const safeIndex = Math.min(weeks.length - 1, Math.max(0, info.index));
                 flatListRef.current.scrollToIndex({
-                  index: Math.min(weeks.length - 1, Math.max(0, info.index)),
-                  animated: false
+                  index: safeIndex,
+                  animated: false,
+                  viewPosition: 0.5 // 가운데 정렬
                 });
               }
             });
           }}
           contentContainerStyle={calendarColor ? { backgroundColor: calendarColor } : undefined}
           style={styles.flatList}
+          maintainVisibleContentPosition={{
+            // 콘텐츠 위치 유지 옵션 (iOS만 지원)
+            minIndexForVisible: 0
+          }}
         />
         
         {rightSelector}
