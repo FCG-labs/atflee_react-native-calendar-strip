@@ -119,11 +119,14 @@ const CalendarStrip = ({
   
   // Handle external updates to selectedDate
   useEffect(() => {
-    if (selectedDate && !dayjs(selectedDate).isSame(dayjs(activeDate), 'day')) {
-      controller.jumpToDate(selectedDate);
-      setActiveDate(controller.getSelectedDate());
+    if (controller && selectedDate) {
+      const controllerSelectedDate = controller.getSelectedDate();
+      if (!dayjs(selectedDate).isSame(controllerSelectedDate, 'day')) {
+        controller.jumpToDate(selectedDate);
+        setActiveDate(controller.getSelectedDate());
+      }
     }
-  }, [selectedDate, activeDate]);
+  }, [selectedDate, controller]);
   
   // Listen to controller updates
   useEffect(() => {
@@ -137,11 +140,11 @@ const CalendarStrip = ({
   
   // Expose methods via ref
   React.useImperativeHandle(calendarRef, () => ({
-    jumpToDate: (date) => controller.jumpToDate(date),
-    scrollToDate: (date) => controller.jumpToDate(date),
-    getSelectedDate: () => controller.getSelectedDate(),
-    goToNextWeek: () => controller.goToNextWeek(),
-    goToPreviousWeek: () => controller.goToPreviousWeek()
+    jumpToDate: (date) => controller ? controller.jumpToDate(date) : null,
+    scrollToDate: (date) => controller ? controller.jumpToDate(date) : null,
+    getSelectedDate: () => controller ? controller.getSelectedDate() : null,
+    goToNextWeek: () => controller ? controller.goToNextWeek() : null,
+    goToPreviousWeek: () => controller ? controller.goToPreviousWeek() : null
   }));
   
   // Controller update handler

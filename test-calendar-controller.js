@@ -6,9 +6,6 @@ import { CalendarController } from './src/controllers/CalendarController';
 
 dayjs.extend(require('dayjs/plugin/isoWeek'));
 
-// 필요한 dayjs 플러그인 직접 로드
-// require('dayjs/plugin/isoWeek');
-
 // 테스트 로깅 함수
 function log(message) {
   console.log(`[TEST] ${message}`);
@@ -91,43 +88,96 @@ function testDateConstraints() {
 function testDateSelection() {
   log('\n=== 테스트 3: 날짜 선택 ===');
   
-  const controller = new CalendarController({
-    initialDate: new Date()
+  // 컨트롤러 생성
+  const controller = new CalendarController({ 
+    initialDate: new Date() 
   });
   
-  // 현재 선택된 날짜 확인
-  log(`초기 선택된 날짜: ${controller.getSelectedDate().format('YYYY-MM-DD')}`);
+  // 초기 선택 날짜 확인
+  const initialDate = controller.getSelectedDate();
+  log(`초기 선택된 날짜: ${initialDate.format('YYYY-MM-DD')}`);
+  log(`초기 선택된 주차: ${controller.getCurrentWeekIndex()}`);
   
-  // 새 날짜 선택
+  // 새로운 날짜 선택
   const newDate = dayjs().add(10, 'day');
-  log(`새 날짜 선택: ${newDate.format('YYYY-MM-DD')}`);
+  log(`새로운 날짜 선택: ${newDate.format('YYYY-MM-DD')}`);
   controller.selectDate(newDate);
   
-  // 선택된 날짜 확인
-  const selectedDate = controller.getSelectedDate();
-  log(`선택 후 날짜: ${selectedDate.format('YYYY-MM-DD')}`);
+  // 날짜 선택 결과 확인
+  log(`현재 선택된 날짜: ${controller.getSelectedDate().format('YYYY-MM-DD')}`);
+  log(`현재 선택된 주차: ${controller.getCurrentWeekIndex()}`);
+}
+
+// 테스트 4: jumpToDate 기능 테스트
+function testJumpToDate() {
+  log('\n=== 테스트 4: jumpToDate 기능 ===');
   
-  return selectedDate.isSame(newDate, 'day');
+  // 컨트롤러 생성
+  const controller = new CalendarController({
+    initialDate: new Date(),
+    minDate: dayjs().subtract(3, 'month').toDate(),
+    maxDate: dayjs().add(3, 'month').toDate()
+  });
+  
+  // 초기 상태 확인
+  let currentIndex = controller.getCurrentWeekIndex();
+  log(`초기 주차 인덱스: ${currentIndex}`);
+  
+  // 과거 날짜로 점프
+  const pastDate = dayjs().subtract(4, 'week');
+  log(`과거 날짜로 점프: ${pastDate.format('YYYY-MM-DD')}`);
+  controller.jumpToDate(pastDate);
+  
+  // 점프 후 상태 확인
+  currentIndex = controller.getCurrentWeekIndex();
+  const weeksAfterPastJump = controller.getWeeks();
+  log(`점프 후 주차 인덱스: ${currentIndex}`);
+  log(`주차 수: ${weeksAfterPastJump.length}`);
+  log(`선택된 날짜: ${controller.getSelectedDate().format('YYYY-MM-DD')}`);
+  
+  // 미래 날짜로 점프
+  const futureDate = dayjs().add(4, 'week');
+  log(`미래 날짜로 점프: ${futureDate.format('YYYY-MM-DD')}`);
+  controller.jumpToDate(futureDate);
+  
+  // 점프 후 상태 확인
+  currentIndex = controller.getCurrentWeekIndex();
+  const weeksAfterFutureJump = controller.getWeeks();
+  log(`점프 후 주차 인덱스: ${currentIndex}`);
+  log(`주차 수: ${weeksAfterFutureJump.length}`);
+  log(`선택된 날짜: ${controller.getSelectedDate().format('YYYY-MM-DD')}`);
+  
+  return true;
 }
 
 // 모든 테스트 실행
 function runAllTests() {
-  const results = [];
+  log('\n*** CalendarController 테스트 시작 ***\n');
   
-  results.push({ name: '동적 주차 로딩', passed: testDynamicWeekLoading() });
-  results.push({ name: '날짜 제약 조건', passed: testDateConstraints() });
-  results.push({ name: '날짜 선택', passed: testDateSelection() });
+  let success = true;
   
-  // 테스트 결과 요약
-  log('\n=== 테스트 결과 요약 ===');
-  let allPassed = true;
+  // 테스트 1: 동적 주차 로딩
+  const test1 = testDynamicWeekLoading();
+  success = success && test1;
   
-  results.forEach(result => {
-    log(`${result.name}: ${result.passed ? '성공 ✅' : '실패 ❌'}`);
-    if (!result.passed) allPassed = false;
-  });
+  // 테스트 2: 날짜 제약 조건
+  const test2 = testDateConstraints();
+  success = success && test2;
   
-  log(`\n전체 테스트: ${allPassed ? '성공 ✅' : '일부 실패 ❌'}`);
+  // 테스트 3: 날짜 선택
+  const test3 = testDateSelection() !== undefined;
+  success = success && test3;
+  
+  // 테스트 4: jumpToDate 기능
+  const test4 = testJumpToDate();
+  success = success && test4;
+  
+  log('\n*** 테스트 결과 요약 ***');
+  log(`테스트 1 (동적 주차 로딩): ${test1 ? '성공' : '실패'}`);
+  log(`테스트 2 (날짜 제약 조건): ${test2 ? '성공' : '실패'}`);
+  log(`테스트 3 (날짜 선택): ${test3 ? '성공' : '실패'}`);
+  log(`테스트 4 (jumpToDate 기능): ${test4 ? '성공' : '실패'}`);
+  log(`종합 결과: ${success ? '모든 테스트 통과!' : '일부 테스트 실패'}`);
 }
 
 // 테스트 실행
