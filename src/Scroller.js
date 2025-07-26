@@ -1,18 +1,13 @@
 // This is a bi-directional infinite scroller.
 // As the beginning & end are reached, the dates are recalculated and the current
 // index adjusted to match the previous visible date.
-// RecyclerListView helps to efficiently recycle instances, but the data that
-// it's fed is finite. Hence the data must be shifted at the ends to appear as
-// an infinite scroller.
+// FlashList efficiently recycles items, but the data that it's fed is finite.
+// Hence the data must be shifted at the ends to appear as an infinite scroller.
 
 import React, { Component } from "react";
 import { View } from "react-native";
 import PropTypes from "prop-types";
-import {
-  RecyclerListView,
-  DataProvider,
-  LayoutProvider,
-} from "recyclerlistview";
+import { FlashList } from "@shopify/flash-list";
 import dayjs from "./dayjs";
 
 export default class CalendarScroller extends Component {
@@ -28,7 +23,6 @@ export default class CalendarScroller extends Component {
     onWeekChanged: PropTypes.func,
     onWeekScrollStart: PropTypes.func,
     onWeekScrollEnd: PropTypes.func,
-    externalScrollView: PropTypes.func,
     pagingEnabled: PropTypes.bool,
     useIsoWeekday: PropTypes.bool,
   };
@@ -48,28 +42,13 @@ export default class CalendarScroller extends Component {
       const itemHeight = renderDayParams.height;
       const itemWidth =
         renderDayParams.width + renderDayParams.marginHorizontal * 2;
-
-      const layoutProvider = new LayoutProvider(
-        (index) => 0, // only 1 view type
-        (type, dim) => {
-          // Use dynamic itemWidth from state if available, fallback to calculated
-          dim.width = this.state?.itemWidth || itemWidth;
-          dim.height = itemHeight;
-        }
-      );
-
-      return { layoutProvider, itemHeight, itemWidth };
+      return { itemHeight, itemWidth };
     };
-
-    this.dataProvider = new DataProvider((r1, r2) => {
-      return r1 !== r2;
-    });
 
     this.updateDaysData = (data) => {
       return {
         data,
         numDays: data.length,
-        dataProvider: this.dataProvider.cloneWithRows(data),
       };
     };
 
@@ -146,7 +125,7 @@ export default class CalendarScroller extends Component {
       this.state.visibleStartIndex - daysInWeek,
       0
     );
-    this.rlv.scrollToIndex(newIndex, true);
+    this.rlv.scrollToIndex({ index: newIndex, animated: true });
   };
 
   // Scroll right, guarding against end index.
@@ -154,10 +133,10 @@ export default class CalendarScroller extends Component {
     const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
     const newIndex = this.state.visibleStartIndex + daysInWeek;
     if (newIndex >= this.state.numDays - 1) {
-      this.rlv.scrollToEnd(true); // scroll to the very end, including padding
+      this.rlv.scrollToEnd({ animated: true }); // scroll to the very end
       return;
     }
-    this.rlv.scrollToIndex(newIndex, true);
+    this.rlv.scrollToIndex({ index: newIndex, animated: true });
   };
 
   // Scroll to given date, and check against min and max date if available.
@@ -210,7 +189,7 @@ export default class CalendarScroller extends Component {
 
     for (let i = 0; i < this.state.data.length; i++) {
       if (this.state.data[i].date.isSame(targetDate, "day")) {
-        this.rlv?.scrollToIndex(i, true);
+        this.rlv?.scrollToIndex({ index: i, animated: true });
         break;
       }
     }
@@ -265,12 +244,12 @@ export default class CalendarScroller extends Component {
     for (let i = 0; i < data.length; i++) {
       if (data[i].date.isSame(prevVisStart, "day")) {
         this.shifting = true;
-        this.rlv.scrollToIndex(i, false);
-        // RecyclerListView sometimes returns position to old index after
-        // moving to the new one. Set position again after delay.
+        this.rlv.scrollToIndex({ index: i, animated: false });
+        // FlashList sometimes returns position to old index after moving to the
+        // new one. Set position again after delay.
         this.timeoutResetPositionId = setTimeout(() => {
           this.timeoutResetPositionId = null;
-          this.rlv.scrollToIndex(i, false);
+          this.rlv.scrollToIndex({ index: i, animated: false });
           this.shifting = false; // debounce
         }, 800);
         break;
@@ -278,12 +257,12 @@ export default class CalendarScroller extends Component {
     }
     this.setState({
       data,
-      dataProvider: this.dataProvider.cloneWithRows(data),
     });
   };
 
   // Track which dates are visible.
-  onVisibleIndicesChanged = (all, now, notNow) => {
+  onVisibleIndicesChanged = ({ viewableItems }) => {
+    const all = viewableItems.map((vi) => vi.index).filter((i) => i != null);
     /**
      * Fix: Previously we used `all[0]` directly. If the first few pixels of the
      * previous week's Sat/Sun were visible, `visibleStartDate` became the week
@@ -292,9 +271,7 @@ export default class CalendarScroller extends Component {
      * Strategy
      * 1. Prefer the first visible index that corresponds to the *start of a
      *    week* (Sun for normal, Mon for ISO calendar).
-     * 2. If none are found, fall back to the first *fully* visible index
-     *    supplied by `now[0]` (indices that became visible during this frame).
-     * 3. Final fallback is the previous behaviour (`all[0]`).
+     * 2. Final fallback is the previous behaviour (`all[0]`).
      */
     const {
       data,
@@ -346,12 +323,7 @@ export default class CalendarScroller extends Component {
     // 1. First visible item that is a start of period (week or 2-week)
     let visibleStartIndex = all.find((idx) => data[idx] && isStartOfPeriod(data[idx].date));
 
-    // 2. Fall back to first *fully* visible item (now[0])
-    if (visibleStartIndex == null && now && now.length) {
-      visibleStartIndex = now[0];
-    }
-
-    // 3. Final fallback
+    // Final fallback
     if (visibleStartIndex == null) {
       visibleStartIndex = all[0] ?? 0;
     }
@@ -486,7 +458,7 @@ export default class CalendarScroller extends Component {
       }
       
       if (shouldAlign && correctedIdx >= 0) {
-        this.rlv?.scrollToIndex(correctedIdx, false);
+        this.rlv?.scrollToIndex({ index: correctedIdx, animated: false });
       }
     }
 
@@ -535,20 +507,17 @@ export default class CalendarScroller extends Component {
     // Adjust itemWidth to fit exactly numDaysInWeek items in the available width
     const adjustedItemWidth = width / daysInWeek;
     
-    // Update layout provider with new itemWidth
     const updatedLayout = this.updateLayout(this.props.renderDayParams);
-    
+
     this.setState({
       numVisibleItems: daysInWeek,
       itemWidth: adjustedItemWidth,
-      layoutProvider: updatedLayout.layoutProvider,
+      itemHeight: updatedLayout.itemHeight,
     });
   };
 
-  rowRenderer = (type, data, i, extState) => {
-    return (
-      this.props.renderDay && this.props.renderDay({ ...data, ...extState })
-    );
+  renderItem = ({ item }) => {
+    return this.props.renderDay && this.props.renderDay({ ...item, ...this.props.renderDayParams });
   };
 
   render() {
@@ -574,24 +543,21 @@ export default class CalendarScroller extends Component {
         style={{ height: this.state.itemHeight, flex: 1 }}
         onLayout={this.onLayout}
       >
-        <RecyclerListView
-          ref={(rlv) => (this.rlv = rlv)}
-          layoutProvider={this.state.layoutProvider}
-          dataProvider={this.state.dataProvider}
-          rowRenderer={this.rowRenderer}
-          extendedState={this.props.renderDayParams}
-          initialRenderIndex={this.props.initialRenderIndex}
-          onVisibleIndicesChanged={this.onVisibleIndicesChanged}
-          isHorizontal
-          externalScrollView={this.props.externalScrollView}
-          scrollViewProps={{
-            showsHorizontalScrollIndicator: false,
-            contentContainerStyle: { paddingRight: this.state.itemWidth / 2 },
-            onMomentumScrollBegin: this.onScrollStart,
-            onMomentumScrollEnd: this.onScrollEnd,
-            onScrollBeginDrag: this.onScrollBeginDrag,
-            ...pagingProps,
-          }}
+        <FlashList
+          ref={(fl) => (this.rlv = fl)}
+          data={this.state.data}
+          renderItem={this.renderItem}
+          estimatedItemSize={this.state.itemWidth}
+          horizontal
+          initialScrollIndex={this.props.initialRenderIndex}
+          onViewableItemsChanged={this.onVisibleIndicesChanged}
+          viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollBegin={this.onScrollStart}
+          onMomentumScrollEnd={this.onScrollEnd}
+          onScrollBeginDrag={this.onScrollBeginDrag}
+          contentContainerStyle={{ paddingRight: this.state.itemWidth / 2 }}
+          {...pagingProps}
         />
       </View>
     );
