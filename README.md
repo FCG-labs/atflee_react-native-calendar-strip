@@ -1,55 +1,194 @@
-<h1 align="center"> react-native-calendar-strip </h1>
+<h1 align="center"> ATFlee React Native Calendar Strip </h1>
 <div align="center">
-  <strong> Easy to use and visually stunning calendar component for React Native.</strong>
+  <strong>고성능 React Native 캘린더 컴포넌트 - 컨트롤러 기반 아키텍처 및 네이티브 모듈 통합</strong>
 </div>
 <br>
-<div align="center">
-  <a href="https://npmjs.org/package/react-native-calendar-strip">
-    <img src="https://img.shields.io/npm/v/react-native-calendar-strip.svg?style=flat-square" alt="npm package version" />
-  </a>
-  <a href="https://npmjs.org/package/react-native-calendar-strip">
-  <img src="https://img.shields.io/npm/dm/react-native-calendar-strip.svg?style=flat-square" alt="npm downloads" />
-  </a>
-  <a href="https://github.com/feross/standard">
-    <img src="https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square" alt="standard JS linter" />
-  </a>
-  <a href="https://github.com/BugiDev/react-native-calendar-strip/blob/master/LICENSE.md">
-    <img src="https://img.shields.io/npm/l/react-native-calendar-strip.svg?style=flat-square" alt="project license" />
-  </a>
-  <a href="http://makeapullrequest.com">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="make a pull request" />
-  </a>
-  <img src="https://img.shields.io/badge/all_contributors-7-orange.svg?style=flat-square" alt="All Contributors" />
-</div>
-<br>
-<div align="center">
-  <a href="https://github.com/BugiDev/react-native-calendar-strip/watchers">
-    <img src="https://img.shields.io/github/watchers/BugiDev/react-native-calendar-strip.svg?style=social" alt="Github Watch Badge" />
-  </a>
-  <a href="https://github.com/BugiDev/react-native-calendar-strip/stargazers">
-    <img src="https://img.shields.io/github/stars/BugiDev/react-native-calendar-strip.svg?style=social" alt="Github Star Badge" />
-  </a>
-  <a href="https://twitter.com/intent/tweet?text=Check%20out%20react-native-calendar-strip!%20https://github.com/BugiDev/react-native-calendar-strip%20%F0%9F%91%8D">
-    <img src="https://img.shields.io/twitter/url/https/github.com/BugiDev/react-native-calendar-strip.svg?style=social" alt="Tweet" />
-  </a>
-</div>
-<br>
-<div align="center">
-  Built with ❤︎ by <a href="https://github.com/BugiDev">BugiDev</a> and <a href="https://github.com/BugiDev/react-native-calendar-strip/graphs/contributors">contributors</a>
-</div>
 
-<h2>Table of Contents</h2>
-  <li><a href="#install">Install</a></li>
-  <li><a href="#usage">Usage</a></li>
-  <li><a href="#props">Props</a></li>
-  <li><a href="#animations">Animations</a></li>
-  <li><a href="#localization">Localization</a></li>
-  <li><a href="#device-specific-notes">Device Specific Notes</a></li>
-  <li><a href="#development-with-sample-application">Local Development</a></li>
-  <li><a href="#contributing">Contributing</a></li>
-  <li><a href="#license">License</a></li>
+## 개요
 
-## Install
+ATFlee React Native Calendar Strip은 React Native 애플리케이션을 위한 고성능 캘린더 컴포넌트입니다. 이 라이브러리는 무한 양방향 스크롤, 이벤트 마커, 주별 표시, 그리고 커스텀 스타일링을 지원합니다. 컨트롤러 기반 아키텍처를 사용하여 상태 관리와 UI 렌더링을 분리하고, 네이티브 모듈 통합을 통해 성능을 최적화했습니다.
+
+### 주요 특징
+
+- 컨트롤러 기반 아키텍처 - 상태 관리와 UI 렌더링 분리
+- 네이티브 모듈 통합으로 성능 최적화
+- 무한 양방향 스크롤 지원
+- 날짜 마커 및 이벤트 표시 기능
+- 테마 및 다양한 스타일링 옵션
+- ISO 표준 요일 지원 (월요일 시작)
+- 가변 주 길이 지원 (5-14일)
+
+## 목차
+
+- [설치](#설치)
+- [기본 사용법](#기본-사용법)
+- [API 참조](#api-참조)
+- [성능 최적화](#성능-최적화)
+- [네이티브 모듈 통합](#네이티브-모듈-통합)
+- [예제 앱](#예제-앱)
+
+## 설치
+
+```bash
+npm install atflee_react-native-calendar-strip --save
+# or
+yarn add atflee_react-native-calendar-strip
+```
+
+## 기본 사용법
+
+```jsx
+import React, { useRef, useState } from 'react';
+import { View, TouchableOpacity, Text } from 'react-native';
+import CalendarStrip from 'atflee_react-native-calendar-strip';
+
+const MyCalendarScreen = () => {
+  const calendarRef = useRef(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  
+  // 날짜 선택 핸들러
+  const handleDateSelected = (date) => {
+    setSelectedDate(date);
+    console.log('선택된 날짜:', date.format('YYYY-MM-DD'));
+  };
+  
+  // 이번 달로 이동
+  const goToToday = () => {
+    calendarRef.current?.goToDate(new Date());
+  };
+  
+  return (
+    <View style={{ flex: 1 }}>
+      <CalendarStrip
+        ref={calendarRef}
+        selectedDate={selectedDate}
+        onDateSelected={handleDateSelected}
+        startingDate={new Date()} // 초기 표시할 날짜
+        useIsoWeekday={false} // true: 월요일 시작, false: 일요일 시작
+        showMonth={true} // 상단에 월 표시
+        visibleDaysCount={7} // 표시할 날짜 수
+        markedDates={[
+          { date: '2023-08-15', dots: [{ color: 'red' }] },
+          { date: '2023-08-18', dots: [{ color: 'blue' }] },
+        ]}
+        style={{ height: 100, paddingVertical: 10 }}
+      />
+      
+      <TouchableOpacity onPress={goToToday} style={{ padding: 10 }}>
+        <Text>오늘로 이동</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+export default MyCalendarScreen;
+```
+
+## API 참조
+
+### CalendarStrip Props
+
+| 속성 | 타입 | 기본값 | 설명 |
+| --- | --- | --- | --- |
+| `selectedDate` | `Date` 또는 `Dayjs` | `new Date()` | 현재 선택된 날짜 |
+| `onDateSelected` | `function` | - | 날짜 선택 시 호출되는 콜백 함수 |
+| `startingDate` | `Date` 또는 `Dayjs` | `new Date()` | 초기 표시할 날짜 |
+| `useIsoWeekday` | `boolean` | `false` | ISO 표준 요일 사용 여부 (true: 월요일 시작) |
+| `showMonth` | `boolean` | `true` | 상단에 월 표시 여부 |
+| `visibleDaysCount` | `number` | `7` | 표시할 날짜 수 (5-14 사이) |
+| `markedDates` | `array` | `[]` | 마커로 표시할 날짜 배열 |
+| `theme` | `object` | - | 커스텀 테마 설정 |
+| `style` | `ViewStyle` | - | 컨테이너 스타일 |
+| `headerStyle` | `ViewStyle` | - | 헤더 스타일 |
+| `dateNumberStyle` | `TextStyle` | - | 날짜 숫자 스타일 |
+| `dateNameStyle` | `TextStyle` | - | 요일명 스타일 |
+| `highlightDateNumberStyle` | `TextStyle` | - | 선택된 날짜 숫자 스타일 |
+| `highlightDateNameStyle` | `TextStyle` | - | 선택된 요일명 스타일 |
+| `disabledDateNumberStyle` | `TextStyle` | - | 비활성화된 날짜 숫자 스타일 |
+| `disabledDateNameStyle` | `TextStyle` | - | 비활성화된 요일명 스타일 |
+| `scrollable` | `boolean` | `true` | 스크롤 가능 여부 |
+| `scrollerPaging` | `boolean` | `true` | 페이징 스크롤 사용 여부 |
+| `useNativeDriver` | `boolean` | `true` | 네이티브 드라이버 사용 여부 |
+
+### CalendarController 메서드
+
+| 메서드 | 매개변수 | 반환값 | 설명 |
+| --- | --- | --- | --- |
+| `goToDate` | `Date` 또는 `Dayjs` | - | 특정 날짜로 이동 |
+| `getSelectedDate` | - | `Dayjs` | 현재 선택된 날짜 반환 |
+| `getVisibleWeek` | - | `array` | 현재 표시된 날짜 배열 반환 |
+| `goToPrevious` | - | - | 이전 주/기간으로 이동 |
+| `goToNext` | - | - | 다음 주/기간으로 이동 |
+
+자세한 API 정보는 [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) 파일을 참조하세요.
+
+## 성능 최적화
+
+### 컨트롤러 기반 아키텍처
+
+ATFlee React Native Calendar Strip은 컨트롤러 기반 아키텍처를 사용하여 상태 관리와 UI 렌더링을 분리했습니다. 이를 통해 다음과 같은 이점을 얻을 수 있습니다:
+
+- **메모리 효율성**: 필요한 날짜 데이터만 메모리에 유지
+- **불필요한 재렌더링 방지**: 변경된 부분만 업데이트
+- **외부 제어 용이성**: 컨트롤러를 통한 명확한 API 제공
+
+### 네이티브 성능 최적화
+
+- **가상화된 리스트**: 보이는 항목만 렌더링하여 메모리 사용량 최소화
+- **메모이제이션**: React.memo 및 useCallback을 통한 렌더링 최적화
+- **네이티브 모듈**: 날짜 계산 및 주간 데이터 생성에 네이티브 코드 활용
+
+## 네이티브 모듈 통합
+
+### 모듈 구조
+
+```
+├── android/src/main/java/com/atflee/calendarstrip/
+│   ├── ATFCalendarModule.java
+│   └── ATFCalendarPackage.java
+└── ios/
+    ├── ATFCalendarModule.swift
+    └── ATFCalendarModuleBridge.m
+```
+
+### 네이티브 모듈 기능
+
+- **주간 데이터 생성**: 날짜 범위에 대한 주간 데이터 계산
+- **ISO 요일 변환**: 표준 요일 및 ISO 요일 간 변환
+- **날짜 연산**: 성능 중요 날짜 계산 처리
+
+네이티브 모듈은 자동으로 통합되며, JavaScript 레벨에서는 `CalendarNativeModule.js`를 통해 접근할 수 있습니다.
+
+## 예제 앱
+
+프로젝트에는 다양한 기능을 보여주는 예제 앱이 포함되어 있습니다:
+
+```
+example/
+└── App.js  # 데모 앱 진입점
+```
+
+예제 앱 실행 방법:
+
+```bash
+# 프로젝트 루트 디렉토리에서
+cd example
+npm install
+npm start
+```
+
+### 예제 앱 기능
+
+- 테마 전환 (라이트/다크)
+- ISO 요일 전환
+- 표시 날짜 수 조절
+- 네비게이션 컨트롤
+- 이벤트 관리 UI
+- 성능 메트릭 표시
+
+## 라이선스
+
+MIT
 
 ```sh
 $ npm install react-native-calendar-strip
