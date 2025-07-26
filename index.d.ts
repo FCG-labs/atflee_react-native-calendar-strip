@@ -77,6 +77,7 @@ interface CalendarStripProps {
   scrollerPaging?: boolean;
   externalScrollView?: ComponentProps<typeof RecyclerListView>['externalScrollView'];
   startingDate?: Dayjs | Date;
+  weekBuffer?: number;
   selectedDate?: Dayjs | Date;
   onDateSelected?: ((date: Dayjs) => void);
   onWeekChanged?: ((start: Dayjs, end: Dayjs) => void);
