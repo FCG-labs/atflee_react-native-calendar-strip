@@ -6,7 +6,7 @@ import {
   TextStyle,
   GestureResponderEvent
 } from "react-native";
-import { RecyclerListView } from 'recyclerlistview';
+import { FlashList } from '@shopify/flash-list';
 
 interface IDaySelectionAnimationBorder {
   type: "border";
@@ -75,8 +75,8 @@ interface CalendarStripProps {
   numDaysInWeek?: number;
   scrollable?: boolean;
   scrollerPaging?: boolean;
-  externalScrollView?: ComponentProps<typeof RecyclerListView>['externalScrollView'];
   startingDate?: Dayjs | Date;
+  weekBuffer?: number;
   selectedDate?: Dayjs | Date;
   onDateSelected?: ((date: Dayjs) => void);
   onWeekChanged?: ((start: Dayjs, end: Dayjs) => void);
