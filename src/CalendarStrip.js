@@ -96,6 +96,9 @@ class CalendarStrip extends Component {
     shouldAllowFontScaling: PropTypes.bool,
     useNativeDriver: PropTypes.bool,
     upperCaseDays: PropTypes.bool,
+    // Number of weeks to keep buffered in the scroller. The visible week plus
+    // this many weeks before and after will be rendered.
+    weekBuffer: PropTypes.number,
   };
 
   static defaultProps = {
@@ -121,11 +124,11 @@ class CalendarStrip extends Component {
     useNativeDriver: true,
     scrollToOnSetSelectedDate: true,
     upperCaseDays: true,
+    weekBuffer: 3,
   };
 
   constructor(props) {
     super(props);
-    this.numDaysScroll = 10000; // prefer even number divisible by 3
 
     const startingDate = this.getInitialStartingDate();
     const selectedDate = this.setLocale(this.props.selectedDate);
@@ -144,6 +147,19 @@ class CalendarStrip extends Component {
     this.animations = [];
     this.layout = {};
   }
+
+  getMaxSimultaneousDays = () => {
+    const weeks = this.props.weekBuffer || 3; // prev, current, next by default
+    const bufferDays = weeks * this.props.numDaysInWeek;
+    const { minDate, maxDate } = this.props;
+
+    if (minDate && maxDate) {
+      const diff = dayjs(maxDate).diff(dayjs(minDate), "days") + 1;
+      return Math.min(diff, bufferDays);
+    }
+
+    return bufferDays;
+  };
 
   //Receiving props and set date states, minimizing state updates.
   componentDidUpdate(prevProps, prevState) {
@@ -493,7 +509,7 @@ class CalendarStrip extends Component {
     let initialScrollerIndex;
 
     if (scrollable) {
-      numDays = this.numDaysScroll;
+      numDays = this.getMaxSimultaneousDays();
       // Center start date in scroller, then re-align to week start.
       const halfWindow = Math.floor(numDays / 2);
       _startingDate = startingDate.clone().subtract(halfWindow, "days");
@@ -590,7 +606,7 @@ class CalendarStrip extends Component {
           pagingEnabled={this.props.scrollerPaging}
           renderDay={this.renderDay}
           renderDayParams={{ ...this.createDayProps(this.state.selectedDate), useIsoWeekday: this.props.useIsoWeekday }}
-          maxSimultaneousDays={this.numDaysScroll}
+          maxSimultaneousDays={this.getMaxSimultaneousDays()}
           initialRenderIndex={this.state.initialScrollerIndex}
           minDate={this.props.minDate}
           maxDate={this.props.maxDate}
