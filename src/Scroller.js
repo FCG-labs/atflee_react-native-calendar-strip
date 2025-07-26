@@ -376,82 +376,82 @@ export default class CalendarScroller extends Component {
     visibleEndDate,
     visibleStartIndex,
   });
-};
 
-onScrollStart = (event) => {
-  const { onWeekScrollStart } = this.props;
-  const { prevStartDate, prevEndDate } = this.state;
+  onScrollStart = (event) => {
+    const { onWeekScrollStart } = this.props;
+    const { prevStartDate, prevEndDate } = this.state;
 
-  if (onWeekScrollStart && prevStartDate && prevEndDate) {
-    onWeekScrollStart(prevStartDate.clone(), prevEndDate.clone());
-  }
-};
+    if (onWeekScrollStart && prevStartDate && prevEndDate) {
+      onWeekScrollStart(prevStartDate.clone(), prevEndDate.clone());
+    }
+  };
 
-onScrollEnd = () => {
-  const { onWeekScrollEnd, onWeekChanged } = this.props;
-  const { visibleStartDate, visibleEndDate, prevEndDate, prevStartDate, visibleStartIndex } = this.state;
-  const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
-  const is2WeekView = daysInWeek === 14;
+  onScrollEnd = () => {
+    const { onWeekScrollEnd, onWeekChanged } = this.props;
+    const { visibleStartDate, visibleEndDate, prevEndDate, prevStartDate, visibleStartIndex } = this.state;
+    const daysInWeek = this.props.renderDayParams?.numDaysInWeek || 7;
+    const is2WeekView = daysInWeek === 14;
 
-  // Fire onWeekChanged once per completed scroll when week/period actually changed
-  if (
-    onWeekChanged &&
-    visibleStartDate &&
-    (!prevStartDate || !visibleStartDate.isSame(prevStartDate, is2WeekView ? 'month' : 'week'))
-  ) {
-    onWeekChanged(visibleStartDate.clone(), visibleEndDate.clone());
-  }
+    // Fire onWeekChanged once per completed scroll when week/period actually changed
+    if (
+      onWeekChanged &&
+      visibleStartDate &&
+      (!prevStartDate || !visibleStartDate.isSame(prevStartDate, is2WeekView ? 'month' : 'week'))
+    ) {
+      onWeekChanged(visibleStartDate.clone(), visibleEndDate.clone());
+    }
 
-  // Safety: ensure first visible item is aligned with period start
-  if (visibleStartDate && visibleStartIndex != null) {
-    let shouldAlign = false;
-    let correctedIdx = visibleStartIndex;
-    
-    if (daysInWeek === 7) {
-      // For 1-week view: align to week start (Sun or Mon)
-      const dow = this.props.useIsoWeekday
-        ? (visibleStartDate.isoWeekday() + 6) % 7 // Mon=0
-        : visibleStartDate.day(); // Sun=0
+    // Safety: ensure first visible item is aligned with period start
+    if (visibleStartDate && visibleStartIndex != null) {
+      let shouldAlign = false;
+      let correctedIdx = visibleStartIndex;
       
-      if (dow !== 0) {
-        correctedIdx = visibleStartIndex - dow;
-        shouldAlign = true;
-      }
-    } else if (daysInWeek === 14) {
-      // For 2-week view: align to 2-week period start
-      const dow = this.props.useIsoWeekday
-        ? (visibleStartDate.isoWeekday() + 6) % 7 // Mon=0
-        : visibleStartDate.day(); // Sun=0
-      
-      if (dow !== 0) {
-        // First, align to week start
-        let weekAlignedIdx = visibleStartIndex - dow;
+      if (daysInWeek === 7) {
+        // For 1-week view: align to week start (Sun or Mon)
+        const dow = this.props.useIsoWeekday
+          ? (visibleStartDate.isoWeekday() + 6) % 7 // Mon=0
+          : visibleStartDate.day(); // Sun=0
         
-        // Then check if we need to align to 2-week period start
-        if (weekAlignedIdx >= 0 && this.state.data[weekAlignedIdx]) {
-          const weekStartDate = this.state.data[weekAlignedIdx].date;
-          
-          if (this.props.useIsoWeekday) {
-            const weekNumber = weekStartDate.isoWeek();
-            if (weekNumber % 2 === 0) {
-              // Even ISO week, go back one more week to odd week start
-              correctedIdx = weekAlignedIdx - 7;
-            } else {
-              correctedIdx = weekAlignedIdx;
-            }
-          } else {
-            const weekNumber = weekStartDate.diff(weekStartDate.startOf('year'), 'week');
-            if (weekNumber % 2 === 1) {
-              // Odd Sun-based week, go back one more week to even week start
-              correctedIdx = weekAlignedIdx - 7;
-            } else {
-              correctedIdx = weekAlignedIdx;
-            }
-          }
+        if (dow !== 0) {
+          correctedIdx = visibleStartIndex - dow;
           shouldAlign = true;
         }
+      } else if (daysInWeek === 14) {
+        // For 2-week view: align to 2-week period start
+        const dow = this.props.useIsoWeekday
+          ? (visibleStartDate.isoWeekday() + 6) % 7 // Mon=0
+          : visibleStartDate.day(); // Sun=0
+        
+        if (dow !== 0) {
+          // First, align to week start
+          let weekAlignedIdx = visibleStartIndex - dow;
+          
+          // Then check if we need to align to 2-week period start
+          if (weekAlignedIdx >= 0 && this.state.data[weekAlignedIdx]) {
+            const weekStartDate = this.state.data[weekAlignedIdx].date;
+            
+            if (this.props.useIsoWeekday) {
+              const weekNumber = weekStartDate.isoWeek();
+              if (weekNumber % 2 === 0) {
+                // Even ISO week, go back one more week to odd week start
+                correctedIdx = weekAlignedIdx - 7;
+              } else {
+                correctedIdx = weekAlignedIdx;
+              }
+            } else {
+              const weekNumber = weekStartDate.diff(weekStartDate.startOf('year'), 'week');
+              if (weekNumber % 2 === 1) {
+                // Odd Sun-based week, go back one more week to even week start
+                correctedIdx = weekAlignedIdx - 7;
+              } else {
+                correctedIdx = weekAlignedIdx;
+              }
+            }
+            shouldAlign = true;
+          }
+        }
       }
-      
+        
       if (shouldAlign && correctedIdx >= 0) {
         this.rlv?.scrollToIndex({ index: correctedIdx, animated: false });
       }
@@ -462,7 +462,8 @@ onScrollEnd = () => {
         onWeekScrollEnd(visibleStartDate.clone(), visibleEndDate.clone());
       }
     }
-  };
+  }
+}
 
   onScrollBeginDrag = () => {
     const { onWeekScrollStart, onWeekScrollEnd } = this.props;
@@ -557,5 +558,5 @@ onScrollEnd = () => {
         />
       </View>
     );
-  }
+  };
 }
