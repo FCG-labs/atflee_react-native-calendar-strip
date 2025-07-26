@@ -386,6 +386,21 @@ export default class CalendarScroller extends Component {
       updateMonthYear && updateMonthYear(visStart, visEnd);
     }
 
+    // Shift the buffered range when scrolling past either end
+    if (visibleStartIndex === 0) {
+      this.shiftDaysBackward(visibleStartDate);
+    } else {
+      const minEndOffset = numDays - numVisibleItems;
+      if (minEndOffset > numVisibleItems) {
+        for (let a of all) {
+          if (a > minEndOffset) {
+            this.shiftDaysForward(visibleStartDate);
+            break;
+          }
+        }
+      }
+    }
+
     this.setState({
       visibleStartDate,
       visibleEndDate,
