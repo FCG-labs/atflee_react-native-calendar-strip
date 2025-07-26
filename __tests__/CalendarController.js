@@ -127,7 +127,7 @@ describe('CalendarController', () => {
   describe('findWeekIndexByDate', () => {
     it('should handle date not in prepared weeks', () => {
       // 매우 먼 미래의 날짜를 검색 - 준비된 주에 포함되지 않을 것임
-      const farFutureDate = dayjs().add(2, 'year').toDate();
+      const farFutureDate = dayjs().add(2, 'year');
       const index = controller.findWeekIndexByDate(farFutureDate);
       expect(index).toBe(-1);
     });
@@ -135,7 +135,7 @@ describe('CalendarController', () => {
     it('should find the correct week index for a date', () => {
       // 주를 준비하고 날짜 검색 테스트
       controller._prepareWeeks(dayjs(), 3);
-      const date = dayjs().add(1, 'day').toDate();
+      const date = dayjs().add(1, 'day');
       const index = controller.findWeekIndexByDate(date);
       
       // 현재 주가 중앙(인덱스 1)에 있어야 함

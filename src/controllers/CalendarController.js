@@ -164,10 +164,13 @@ class CalendarController {
       }
     }
     
+    // dayjs 객체는 불변이므로 endDate를 별도 변수에 저장
+    const endDate = actualStartDate.add(numDays - 1, 'day');
+    
     return {
       id: actualStartDate.format('YYYY-MM-DD'),
       startDate: actualStartDate,
-      endDate: actualStartDate.add(numDays - 1, 'day'),
+      endDate: endDate,
       days
     };
   }
@@ -269,6 +272,7 @@ class CalendarController {
       this._selectedDate = this._weeks[this._currentWeekIndex].days[0].date;
     } else {
       // Need to generate a new previous week
+      // dayjs 객체는 불변이므로 별도 변수에 저장
       const previousWeekStart = this._weeks[0].startDate
         .subtract(this._options.numDaysInWeek, 'day');
       
@@ -302,6 +306,7 @@ class CalendarController {
     } else {
       // Need to generate a new next week
       const lastWeek = this._weeks[this._weeks.length - 1];
+      // dayjs 객체는 불변이므로 별도 변수에 저장
       const nextWeekStart = lastWeek.startDate
         .add(this._options.numDaysInWeek, 'day');
       
@@ -366,11 +371,11 @@ class CalendarController {
   }
 
   /**
-   * Get the currently selected date as a native Date object
-   * @returns {Date} Currently selected date as a native Date object
+   * Get the currently selected date (originally returned native Date, now returns dayjs for consistency)
+   * @returns {dayjs.Dayjs} Currently selected date as a dayjs object
    */
   getSelectedDateNative() {
-    return this._selectedDate.toDate();
+    return this._selectedDate;
   }
 
   /**

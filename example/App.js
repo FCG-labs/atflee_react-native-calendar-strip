@@ -55,7 +55,7 @@ const THEMES = {
 export default function App() {
   // Calendar refs and state
   const calendarRef = useRef(null);
-  const [selectedDate, setSelectedDate] = useState(dayjs().toDate());
+  const [selectedDate, setSelectedDate] = useState(dayjs());
   const [formattedDate, setFormattedDate] = useState(dayjs().format('YYYY-MM-DD'));
   
   // Configuration state
@@ -99,7 +99,7 @@ export default function App() {
       for (let j = 0; j < eventCount; j++) {
         newEvents.push({
           id: `event_${i}_${j}`,
-          date: date.toDate(),
+          date: date,
           title: `Event ${j + 1} on ${date.format('MMM D')}`,
           color: j % 2 === 0 ? THEMES[theme].secondary : THEMES[theme].accent
         });
@@ -193,7 +193,7 @@ export default function App() {
   // Jump to a date 3 months ahead
   const jumpToFuture = () => {
     if (calendarRef.current) {
-      const futureDate = dayjs().add(3, 'month').toDate();
+      const futureDate = dayjs().add(3, 'month');
       calendarRef.current.jumpToDate(futureDate);
     }
   };

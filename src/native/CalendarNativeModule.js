@@ -164,7 +164,7 @@ class CalendarNativeModule {
     for (let i = 0; i < numDaysInWeek; i++) {
       const date = weekStart.add(i, 'day');
       days.push({
-        date: date.toDate(),
+        date: date,
         dateString: date.format('YYYY-MM-DD'),
         dayOfWeek: date.day(),
         dayOfMonth: date.date(),
@@ -176,8 +176,8 @@ class CalendarNativeModule {
     
     return {
       weekId: weekStart.format('YYYY-MM-DD'),
-      startDate: weekStart.toDate(),
-      endDate: weekStart.add(numDaysInWeek - 1, 'day').toDate(),
+      startDate: weekStart,
+      endDate: weekStart.add(numDaysInWeek - 1, 'day'),
       days
     };
   }
@@ -226,7 +226,7 @@ class CalendarNativeModule {
     for (let i = 0; i < dayCount; i++) {
       const date = startDate.add(i, 'day');
       days.push({
-        date: date.toDate(),
+        date: date,
         dateString: date.format('YYYY-MM-DD'),
         dayOfWeek: date.day(),
         dayOfMonth: date.date(),

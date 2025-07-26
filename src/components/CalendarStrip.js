@@ -102,14 +102,14 @@ const CalendarStrip = ({
   const [visibleStartDate, setVisibleStartDate] = useState(null);
   const [visibleEndDate, setVisibleEndDate] = useState(null);
   const [activeDate, setActiveDate] = useState(
-    controller.getSelectedDateNative()
+    controller.getSelectedDate()
   );
   
   // Handle external updates to selectedDate
   useEffect(() => {
     if (selectedDate && !dayjs(selectedDate).isSame(dayjs(activeDate), 'day')) {
       controller.jumpToDate(selectedDate);
-      setActiveDate(controller.getSelectedDateNative());
+      setActiveDate(controller.getSelectedDate());
     }
   }, [selectedDate, activeDate]);
   
@@ -121,7 +121,7 @@ const CalendarStrip = ({
       setCurrentWeek(updatedController.getCurrentWeek());
       setWeekIndex(updatedController.getCurrentWeekIndex());
       setWeeks(updatedController.getWeeks());
-      setActiveDate(updatedController.getSelectedDateNative());
+      setActiveDate(updatedController.getSelectedDate());
       
       // Scroll FlatList to the new week index
       if (flatListRef.current) {
@@ -140,7 +140,7 @@ const CalendarStrip = ({
   React.useImperativeHandle(calendarRef, () => ({
     jumpToDate: (date) => controller.jumpToDate(date),
     scrollToDate: (date) => controller.jumpToDate(date),
-    getSelectedDate: () => controller.getSelectedDateNative(),
+    getSelectedDate: () => controller.getSelectedDate(),
     goToNextWeek: () => controller.goToNextWeek(),
     goToPreviousWeek: () => controller.goToPreviousWeek()
   }));
@@ -163,10 +163,10 @@ const CalendarStrip = ({
     }
 
     controller.selectDate(date);
-    setActiveDate(controller.getSelectedDateNative());
+    setActiveDate(controller.getSelectedDate());
     
     if (onDateSelected) {
-      onDateSelected(controller.getSelectedDateNative());
+      onDateSelected(controller.getSelectedDate());
     }
   }, [onDateSelected, minDate, maxDate]);
   
@@ -182,8 +182,7 @@ const CalendarStrip = ({
     if (updateMonthYear) {
       // Use the middle date of the week for the header
       const middleDate = dayjs(startDate)
-        .add(Math.floor(numDaysInWeek / 2), 'day')
-        .toDate();
+        .add(Math.floor(numDaysInWeek / 2), 'day');
       updateMonthYear(middleDate);
     }
   }, [onWeekChanged, updateMonthYear, numDaysInWeek]);
@@ -196,8 +195,8 @@ const CalendarStrip = ({
       
       if (visibleWeek) {
         handleWeekChanged(
-          visibleWeek.startDate.toDate(),
-          visibleWeek.endDate.toDate()
+          visibleWeek.startDate,
+          visibleWeek.endDate
         );
       }
     }
@@ -213,13 +212,6 @@ const CalendarStrip = ({
   
   // Render week
   const renderWeek = useCallback(({ item: week }) => {
-    // 각 주의 첫 번째 날짜만 로그로 출력 (너무 많은 로그 방지)
-    if (week.days.length > 0) {
-      console.log('day.date 타입:', typeof week.days[0].date);
-      console.log('day.date 값:', week.days[0].date);
-      console.log('day.date instanceof Date:', week.days[0].date instanceof Date);
-      console.log('day.date.toDate 존재 여부:', typeof week.days[0].date.toDate === 'function');
-    }
     return (
       <View style={[styles.week, { width: viewWidth }]}>
         {week.days.map(day => (
