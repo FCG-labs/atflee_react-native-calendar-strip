@@ -95,7 +95,6 @@ const CalendarStrip = ({
   const flatListRef = useRef(null);
   
   // State
-  const [currentWeek, setCurrentWeek] = useState(controller.getCurrentWeek());
   const [weekIndex, setWeekIndex] = useState(controller.getCurrentWeekIndex());
   const [weeks, setWeeks] = useState(controller.getWeeks());
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
@@ -118,7 +117,6 @@ const CalendarStrip = ({
     const removeListener = controller.addListener(updatedController => {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       
-      setCurrentWeek(updatedController.getCurrentWeek());
       setWeekIndex(updatedController.getCurrentWeekIndex());
       setWeeks(updatedController.getWeeks());
       setActiveDate(updatedController.getSelectedDateNative());

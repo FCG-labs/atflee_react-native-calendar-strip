@@ -7,6 +7,42 @@ import {
 } from "react-native";
 
 /**
+ * Single day data structure as returned by CalendarController
+ */
+export interface CalendarDay {
+  /** Native Date object for this day */
+  date: Date;
+  /** String representation of date in YYYY-MM-DD format */
+  dateString: string;
+  /** Day of week (0-6, 0 is Sunday) */
+  dayOfWeek: number;
+  /** Day of month (1-31) */
+  dayOfMonth: number;
+  /** Month (0-11) */
+  month: number;
+  /** Year */
+  year: number;
+  /** Whether this date is today */
+  isToday: boolean;
+  /** Whether this date is in the current month */
+  isCurrentMonth: boolean;
+}
+
+/**
+ * Week data structure as returned by CalendarController
+ */
+export interface CalendarWeek {
+  /** Unique ID of the week (first day's date string) */
+  id: string;
+  /** Start date of week as dayjs object */
+  startDate: Dayjs;
+  /** End date of week as dayjs object */
+  endDate: Dayjs;
+  /** Array of day objects in this week */
+  days: CalendarDay[];
+}
+
+/**
  * Props for custom day component - exact match to what's passed in CalendarDateItem.js
  */
 export interface IDayComponentProps {
@@ -267,6 +303,11 @@ export interface CalendarStripProps {
   // Reference
   /**
    * Ref to access calendar methods
+   * @example
+   * const calendarRef = useRef<CalendarStripMethods>(null);
+   * // Later access methods like:
+   * // calendarRef.current?.jumpToDate(date);
+   * // calendarRef.current?.getCurrentWeek();
    */
   calendarRef?: RefObject<CalendarStripMethods>;
 }
@@ -303,6 +344,24 @@ export interface CalendarStripMethods {
    * Navigate to the previous week
    */
   goToPreviousWeek(): void;
+  
+  /**
+   * Get the current week's data including days and date range
+   * @returns Current week data or null if not available
+   */
+  getCurrentWeek(): CalendarWeek | null;
+  
+  /**
+   * Get all loaded weeks data
+   * @returns Array of week data objects
+   */
+  getWeeks(): CalendarWeek[];
+  
+  /**
+   * Get current week index
+   * @returns Current week index number
+   */
+  getCurrentWeekIndex(): number;
 }
 
 /**
