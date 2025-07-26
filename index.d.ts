@@ -10,8 +10,8 @@ import {
  * Single day data structure as returned by CalendarController
  */
 export interface CalendarDay {
-  /** Native Date object for this day */
-  date: Date;
+  /** Dayjs object for this day */
+  date: Dayjs;
   /** String representation of date in YYYY-MM-DD format */
   dateString: string;
   /** Day of week (0-6, 0 is Sunday) */
@@ -47,9 +47,9 @@ export interface CalendarWeek {
  */
 export interface IDayComponentProps {
   /**
-   * The date object for this day
+   * The dayjs date object for this day
    */
-  date: Date;
+  date: Dayjs;
   
   /**
    * Whether this date is currently selected
@@ -78,24 +78,25 @@ export interface IDayComponentProps {
   
   /**
    * Callback to select this date
+   * @param date The selected dayjs date
    */
-  onDateSelected: () => void;
+  onDateSelected: (date: Dayjs) => void;
 }
 
 /**
  * Date range type
  */
 export interface DateRange {
-  start: Date | Dayjs;
-  end: Date | Dayjs;
+  start: Dayjs;
+  end: Dayjs;
 }
 
 /**
  * Marker date format used in the markedDates array
  */
 export interface MarkedDate {
-  /** Date to mark - can be Date object, Dayjs object, or date string */
-  date: Date | Dayjs | string;
+  /** Date to mark - can be Dayjs object, or date string */
+  date: Dayjs | string;
   /** Optional dots to display for the marker */
   dots?: Array<{color?: string; [key: string]: any}>;
   /** Any additional custom properties */
@@ -110,22 +111,22 @@ export interface CalendarStripProps {
   /**
    * Initial selected date
    */
-  selectedDate?: Date | Dayjs;
+  selectedDate?: Dayjs;
   
   /**
    * Date to start the calendar at
    */
-  startingDate?: Date | Dayjs;
+  startingDate?: Dayjs;
   
   /**
    * Minimum selectable date
    */
-  minDate?: Date | Dayjs;
+  minDate?: Dayjs;
   
   /**
    * Maximum selectable date
    */
-  maxDate?: Date | Dayjs;
+  maxDate?: Dayjs;
   
   /**
    * Use ISO weekday (Monday as first day)
@@ -249,14 +250,14 @@ export interface CalendarStripProps {
    * Callback when a date is selected
    * @param date The selected date
    */
-  onDateSelected?: (date: Date | Dayjs) => void;
+  onDateSelected?: (date: Dayjs) => void;
   
   /**
    * Callback when the visible week changes
    * @param startDate First day of the new visible week
    * @param endDate Last day of the new visible week
    */
-  onWeekChanged?: (startDate: Date | Dayjs, endDate: Date | Dayjs) => void;
+  onWeekChanged?: (startDate: Dayjs, endDate: Dayjs) => void;
   
   /**
    * Callback when the header is selected
@@ -298,7 +299,7 @@ export interface CalendarStripProps {
   /**
    * Custom marker component renderer
    */
-  markerComponent?: (props: { date: Date; dots: any[] }) => ReactNode;
+  markerComponent?: (props: { date: Dayjs; dots: any[] }) => ReactNode;
   
   // Reference
   /**
@@ -321,19 +322,19 @@ export interface CalendarStripMethods {
    * Jump to specific date
    * @param date The date to jump to
    */
-  jumpToDate(date: Date | Dayjs): void;
+  jumpToDate(date: Dayjs): void;
   
   /**
    * Scroll to specific date (alias for jumpToDate)
    * @param date The date to scroll to
    */
-  scrollToDate(date: Date | Dayjs): void;
+  scrollToDate(date: Dayjs): void;
   
   /**
    * Get the currently selected date
    * @returns Native Date object of the selected date
    */
-  getSelectedDate(): Date;
+  getSelectedDate(): Dayjs;
   
   /**
    * Navigate to the next week
