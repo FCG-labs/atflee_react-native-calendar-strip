@@ -28,7 +28,6 @@ class CalendarStrip extends Component {
     numDaysInWeek: PropTypes.number,
     scrollable: PropTypes.bool,
     scrollerPaging: PropTypes.bool,
-    externalScrollView: PropTypes.func,
     startingDate: PropTypes.any,
     selectedDate: PropTypes.any,
     onDateSelected: PropTypes.func,
@@ -614,7 +613,6 @@ class CalendarStrip extends Component {
           onWeekChanged={this.props.onWeekChanged}
           onWeekScrollStart={this.props.onWeekScrollStart}
           onWeekScrollEnd={this.props.onWeekScrollEnd}
-          externalScrollView={this.props.externalScrollView}
           useIsoWeekday={this.props.useIsoWeekday}
         />
       );
