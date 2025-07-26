@@ -111,7 +111,7 @@ class CalendarController {
     }
     
     return {
-      date: safeDate.toDate(), // dayjs 객체를 네이티브 Date 객체로 변환
+      date: safeDate, // dayjs 객체를 그대로 유지
       dateString: safeDate.format('YYYY-MM-DD'),
       dayOfWeek: safeDate.day(),
       dayOfMonth: safeDate.date(),

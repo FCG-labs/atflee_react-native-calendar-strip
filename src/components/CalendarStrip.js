@@ -95,6 +95,7 @@ const CalendarStrip = ({
   const flatListRef = useRef(null);
   
   // State
+  const [currentWeek, setCurrentWeek] = useState(controller.getCurrentWeek());
   const [weekIndex, setWeekIndex] = useState(controller.getCurrentWeekIndex());
   const [weeks, setWeeks] = useState(controller.getWeeks());
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
@@ -117,6 +118,7 @@ const CalendarStrip = ({
     const removeListener = controller.addListener(updatedController => {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       
+      setCurrentWeek(updatedController.getCurrentWeek());
       setWeekIndex(updatedController.getCurrentWeekIndex());
       setWeeks(updatedController.getWeeks());
       setActiveDate(updatedController.getSelectedDateNative());
@@ -211,12 +213,19 @@ const CalendarStrip = ({
   
   // Render week
   const renderWeek = useCallback(({ item: week }) => {
+    // 각 주의 첫 번째 날짜만 로그로 출력 (너무 많은 로그 방지)
+    if (week.days.length > 0) {
+      console.log('day.date 타입:', typeof week.days[0].date);
+      console.log('day.date 값:', week.days[0].date);
+      console.log('day.date instanceof Date:', week.days[0].date instanceof Date);
+      console.log('day.date.toDate 존재 여부:', typeof week.days[0].date.toDate === 'function');
+    }
     return (
       <View style={[styles.week, { width: viewWidth }]}>
         {week.days.map(day => (
           <CalendarDateItem
             key={day.dateString}
-            date={day.date.toDate()}
+            date={day.date}
             dateNumber={day.dayOfMonth}
             dayName={upperCaseDays
               ? day.date.format('ddd').toUpperCase()
