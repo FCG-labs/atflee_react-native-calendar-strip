@@ -46,6 +46,7 @@
     "react-native": "*"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^13.2.0",
     "@types/react": "^17.0.0",
     "@types/react-native": "^0.63.37",
     "all-contributors-cli": "^4.10.1",

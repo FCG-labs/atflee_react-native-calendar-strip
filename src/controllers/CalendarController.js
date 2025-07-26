@@ -36,6 +36,7 @@ class CalendarController {
 
     // Week data management
     this._visibleWeeks = {}; // Currently visible weeks (for efficient rendering)
+    this._weeks = []; // Array of week objects in display order
     
     // Change listeners
     this._listeners = new Set();
@@ -92,6 +93,34 @@ class CalendarController {
       return date.day(0).startOf('day');
     }
   }
+  
+  /**
+   * Generate a day object from a date
+   * @param {dayjs.Dayjs|Date|string} date - Date to generate day object for
+   * @returns {Object|null} Day object or null if date is invalid
+   * @private
+   */
+  _generateDay(date) {
+    // Ensure date is a dayjs object
+    const safeDate = dayjs.isDayjs(date) ? date : dayjs(date);
+    
+    // Only proceed if we have a valid date
+    if (!safeDate || !safeDate.isValid()) {
+      // 로깅 대신 정적 null 반환으로 변경
+      return null;
+    }
+    
+    return {
+      date: safeDate.toDate(), // dayjs 객체를 네이티브 Date 객체로 변환
+      dateString: safeDate.format('YYYY-MM-DD'),
+      dayOfWeek: safeDate.day(),
+      dayOfMonth: safeDate.date(),
+      month: safeDate.month(),
+      year: safeDate.year(),
+      isToday: safeDate.isSame(this._today, 'day'),
+      isCurrentMonth: safeDate.month() === this._today.month()
+    };
+  }
 
   /**
    * Generate a week of days starting from a given date
@@ -129,16 +158,10 @@ class CalendarController {
     // Generate day objects for the week
     for (let i = 0; i < numDays; i++) {
       const date = actualStartDate.add(i, 'day');
-      days.push({
-        date,
-        dateString: date.format('YYYY-MM-DD'),
-        dayOfWeek: date.day(),
-        dayOfMonth: date.date(),
-        month: date.month(),
-        year: date.year(),
-        isToday: date.isSame(this._today, 'day'),
-        isCurrentMonth: date.month() === this._today.month()
-      });
+      const day = this._generateDay(date);
+      if (day) {
+        days.push(day);
+      }
     }
     
     return {
@@ -170,9 +193,18 @@ class CalendarController {
       if (!this._visibleWeeks[weekId]) {
         const week = this._generateWeek(startDate);
         weeks.push(week);
-        this._visibleWeeks[weekId] = true;
+        this._visibleWeeks[weekId] = week; // Store week object instead of just true
+      } else {
+        // Get the existing week from _weeks if it exists
+        const existingWeekIndex = this._weeks.findIndex(w => w.id === weekId);
+        if (existingWeekIndex >= 0) {
+          weeks.push(this._weeks[existingWeekIndex]);
+        }
       }
     }
+    
+    // Reset and rebuild _weeks array with newly ordered weeks
+    this._weeks = weeks;
   }
 
   /**
@@ -182,8 +214,7 @@ class CalendarController {
    */
   findWeekIndexByDate(date) {
     const targetDate = dayjs(date);
-    const weeks = Object.values(this._visibleWeeks);
-    return weeks.findIndex(week => {
+    return this._weeks.findIndex(week => {
       return targetDate.isAfter(week.startDate.subtract(1, 'day')) &&
              targetDate.isBefore(week.endDate.add(1, 'day'));
     });
@@ -228,19 +259,25 @@ class CalendarController {
    * Navigate to the previous week
    */
   goToPreviousWeek() {
-    const weeks = Object.values(this._visibleWeeks);
+    if (this._weeks.length === 0) {
+      return; // No weeks available yet
+    }
+    
     if (this._currentWeekIndex > 0) {
       // We already have the previous week loaded
       this._currentWeekIndex--;
-      this._selectedDate = weeks[this._currentWeekIndex].days[0].date;
+      this._selectedDate = this._weeks[this._currentWeekIndex].days[0].date;
     } else {
       // Need to generate a new previous week
-      const previousWeekStart = weeks[0].startDate
+      const previousWeekStart = this._weeks[0].startDate
         .subtract(this._options.numDaysInWeek, 'day');
       
       // Prepare the previous week
       const newWeek = this._generateWeek(previousWeekStart);
-      this._visibleWeeks[newWeek.id] = true;
+      this._visibleWeeks[newWeek.id] = newWeek;
+      
+      // Insert at beginning of weeks array
+      this._weeks.unshift(newWeek);
       
       // Keep the current index at 0 but update selected date
       this._selectedDate = newWeek.days[0].date;
@@ -254,20 +291,26 @@ class CalendarController {
    * Navigate to the next week
    */
   goToNextWeek() {
-    const weeks = Object.values(this._visibleWeeks);
-    if (this._currentWeekIndex < weeks.length - 1) {
+    if (this._weeks.length === 0) {
+      return; // No weeks available yet
+    }
+    
+    if (this._currentWeekIndex < this._weeks.length - 1) {
       // We already have the next week loaded
       this._currentWeekIndex++;
-      this._selectedDate = weeks[this._currentWeekIndex].days[0].date;
+      this._selectedDate = this._weeks[this._currentWeekIndex].days[0].date;
     } else {
       // Need to generate a new next week
-      const lastWeek = weeks[weeks.length - 1];
+      const lastWeek = this._weeks[this._weeks.length - 1];
       const nextWeekStart = lastWeek.startDate
         .add(this._options.numDaysInWeek, 'day');
       
       // Prepare the next week
       const newWeek = this._generateWeek(nextWeekStart);
-      this._visibleWeeks[newWeek.id] = true;
+      this._visibleWeeks[newWeek.id] = newWeek;
+      
+      // Add to end of weeks array
+      this._weeks.push(newWeek);
       this._currentWeekIndex++;
       
       // Update selected date
