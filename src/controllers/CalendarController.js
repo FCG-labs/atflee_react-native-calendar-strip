@@ -227,10 +227,10 @@ class CalendarController {
   }
 
   /**
-   * Jump to a specific date
-   * @param {Date|string} date - Date to jump to
+   * Scroll to a specific date
+   * @param {Date|string} date - Date to scroll to
    */
-  jumpToDate(date) {
+  scrollToDate(date) {
     const targetDate = dayjs(date);
     
     // Find if the week containing this date is already loaded

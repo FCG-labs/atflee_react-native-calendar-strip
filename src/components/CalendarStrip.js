@@ -137,8 +137,7 @@ const CalendarStrip = ({
   
   // Expose methods via ref
   React.useImperativeHandle(calendarRef, () => ({
-    jumpToDate: (date) => controller.jumpToDate(date),
-    scrollToDate: (date) => controller.jumpToDate(date),
+    scrollToDate: (date) => controller.scrollToDate(date),
     getSelectedDate: () => controller.getSelectedDate(),
     goToNextWeek: () => controller.goToNextWeek(),
     goToPreviousWeek: () => controller.goToPreviousWeek()
