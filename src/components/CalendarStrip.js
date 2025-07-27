@@ -226,9 +226,13 @@ const CalendarStrip = ({
 
   // True Carousel: Real-time scroll threshold detection
   const isShiftingRef = useRef(false);
+  const pendingShiftRef = useRef([]);
   
   const shiftLeft = useCallback(() => {
-    if (isShiftingRef.current) return false;
+    if (isShiftingRef.current) {
+      pendingShiftRef.current.push('left');
+      return false;
+    }
     isShiftingRef.current = true;
 
     let shifted = false;
@@ -252,7 +256,10 @@ const CalendarStrip = ({
   }, [generateWeek, getWeekStart, numDaysInWeek, minDate, WINDOW_SIZE]);
 
   const shiftRight = useCallback(() => {
-    if (isShiftingRef.current) return false;
+    if (isShiftingRef.current) {
+      pendingShiftRef.current.push('right');
+      return false;
+    }
     isShiftingRef.current = true;
 
     let shifted = false;
@@ -286,6 +293,12 @@ const CalendarStrip = ({
       if (isShiftingRef.current) {
         if (page === CENTER_INDEX) {
           isShiftingRef.current = false;
+          const next = pendingShiftRef.current.shift();
+          if (next === 'left') {
+            shiftLeft();
+          } else if (next === 'right') {
+            shiftRight();
+          }
         }
         return;
       }

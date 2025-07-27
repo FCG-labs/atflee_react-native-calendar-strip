@@ -40,25 +40,23 @@ describe('CalendarStrip week shifting', () => {
     expect(ref.current.getWeeks()).toHaveLength(3);
   });
 
-  test('ignores additional right swipe while shifting', () => {
+  test('queues additional right swipe while shifting', () => {
     const ref = React.createRef();
     const { UNSAFE_getByType } = render(<CalendarStrip ref={ref} showMonth={false} />);
     const list = UNSAFE_getByType(FlatList);
     const width = getItemWidth(list);
     const before = ref.current.getCurrentWeek().startDate;
 
-    // first swipe
     fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: width * 2 } } });
-    // user quickly swipes again before internal reset
     fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: width * 2 } } });
-    // internal event from first swipe
+    fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: width } } });
     fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: width } } });
 
     const after = ref.current.getCurrentWeek().startDate;
-    expect(dayjs(after).diff(dayjs(before), 'day')).toBe(7);
+    expect(dayjs(after).diff(dayjs(before), 'day')).toBe(14);
   });
 
-  test('ignores additional left swipe while shifting', () => {
+  test('queues additional left swipe while shifting', () => {
     const ref = React.createRef();
     const { UNSAFE_getByType } = render(<CalendarStrip ref={ref} showMonth={false} />);
     const list = UNSAFE_getByType(FlatList);
@@ -68,8 +66,9 @@ describe('CalendarStrip week shifting', () => {
     fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 0 } } });
     fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 0 } } });
     fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: width } } });
+    fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: width } } });
 
     const after = ref.current.getCurrentWeek().startDate;
-    expect(dayjs(before).diff(dayjs(after), 'day')).toBe(7);
+    expect(dayjs(before).diff(dayjs(after), 'day')).toBe(14);
   });
 });
