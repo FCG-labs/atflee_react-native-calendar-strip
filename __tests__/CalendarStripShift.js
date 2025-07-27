@@ -71,4 +71,22 @@ describe('CalendarStrip week shifting', () => {
     const after = ref.current.getCurrentWeek().startDate;
     expect(dayjs(before).diff(dayjs(after), 'day')).toBe(14);
   });
+
+  test('onWeekChanged receives dayjs objects during rapid updates', () => {
+    const onWeekChanged = jest.fn();
+    const { UNSAFE_getByType } = render(
+      <CalendarStrip showMonth={false} onWeekChanged={onWeekChanged} />
+    );
+    const list = UNSAFE_getByType(FlatList);
+    const callback = list.props.viewabilityConfigCallbackPairs[0].onViewableItemsChanged;
+
+    callback({ viewableItems: [{ index: 1 }] });
+    callback({ viewableItems: [{ index: 1 }] });
+
+    expect(onWeekChanged).toHaveBeenCalled();
+    onWeekChanged.mock.calls.forEach(args => {
+      expect(dayjs.isDayjs(args[0])).toBe(true);
+      expect(dayjs.isDayjs(args[1])).toBe(true);
+    });
+  });
 });

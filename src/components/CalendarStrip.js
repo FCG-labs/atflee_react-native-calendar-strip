@@ -317,7 +317,7 @@ const CalendarStrip = ({
   const onViewableItemsChanged = useCallback(({ viewableItems }) => {
     const centerWeek = weeks[CENTER_INDEX];
     if (centerWeek && onWeekChanged) {
-      onWeekChanged(centerWeek.startDate, centerWeek.endDate);
+      onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
     }
     
     if (centerWeek && updateMonthYear) {
@@ -482,6 +482,12 @@ const CalendarStrip = ({
   const viewabilityConfigCallbackPairs = useRef([
     { viewabilityConfig, onViewableItemsChanged }
   ]);
+
+  useEffect(() => {
+    viewabilityConfigCallbackPairs.current = [
+      { viewabilityConfig, onViewableItemsChanged }
+    ];
+  }, [onViewableItemsChanged]);
 
   return (
     <View style={[styles.container, style]} onLayout={onLayout}>
