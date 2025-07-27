@@ -17,7 +17,7 @@ const CalendarDateItem = memo(({
   isWeekend,
   showDayName,
   showDayNumber,
-  dayTextStyle,
+  dateNameStyle,
   dateNumberStyle,
   highlightDateNumberStyle,
   highlightDateNameStyle,
@@ -61,7 +61,7 @@ const CalendarDateItem = memo(({
   
   const dayStyle = [
     styles.dayText,
-    dayTextStyle,
+    dateNameStyle,
     isActive ? highlightDateNameStyle : null,
     isStyledWeekend && !isActive ? { color: '#999' } : null,
     isDisabled ? { opacity: disabledDateOpacity } : null
@@ -188,7 +188,7 @@ CalendarDateItem.propTypes = {
   isWeekend: PropTypes.bool,
   showDayName: PropTypes.bool,
   showDayNumber: PropTypes.bool,
-  dayTextStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  dateNameStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   dateNumberStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   highlightDateNumberStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   highlightDateNameStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
