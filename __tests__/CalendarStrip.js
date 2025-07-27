@@ -75,4 +75,25 @@ describe('CalendarStrip functional API', () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
   });
+
+  test('reuses viewabilityConfigCallbackPairs array across renders', () => {
+    const firstCb = jest.fn();
+    const { UNSAFE_getByType, rerender } = render(
+      <CalendarStrip showMonth={false} onViewableItemsChanged={firstCb} />
+    );
+
+    const flatList1 = UNSAFE_getByType(FlatList);
+    const pairs1 = flatList1.props.viewabilityConfigCallbackPairs;
+
+    const secondCb = jest.fn();
+    rerender(
+      <CalendarStrip showMonth={false} onViewableItemsChanged={secondCb} />
+    );
+
+    const flatList2 = UNSAFE_getByType(FlatList);
+    const pairs2 = flatList2.props.viewabilityConfigCallbackPairs;
+
+    expect(pairs2).toBe(pairs1);
+    expect(pairs2[0].onViewableItemsChanged).toBe(secondCb);
+  });
 });
