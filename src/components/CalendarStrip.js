@@ -500,11 +500,10 @@ const CalendarStrip = ({
   const viewabilityConfigCallbackPairs = useRef([
     { viewabilityConfig, onViewableItemsChanged }
   ]);
-  
+
   useEffect(() => {
-    viewabilityConfigCallbackPairs.current = [
-      { viewabilityConfig, onViewableItemsChanged }
-    ];
+    viewabilityConfigCallbackPairs.current[0].onViewableItemsChanged =
+      onViewableItemsChanged;
   }, [onViewableItemsChanged]);
 
   return (
