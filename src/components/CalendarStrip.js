@@ -139,20 +139,27 @@ const CalendarStrip = ({
 
     const weekStart = getWeekStart(currentDate);
     logger.debug('[INIT] Week start:', weekStart.format('YYYY-MM-DD'));
-    
+
     const weeks = [];
-    
-    // Generate window of weeks around the active date
-    for (let i = -weekBuffer; i <= weekBuffer; i++) {
-      const start = weekStart.add(i * numDaysInWeek, 'day');
-      const week = generateWeek(start);
-      logger.debug(`[INIT] Week ${i + 1}:`, dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
+
+    if (!scrollable) {
+      // Only generate the current week when not scrollable
+      const week = generateWeek(weekStart);
+      logger.debug('[INIT] Week 1:', dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
       weeks.push(week);
+    } else {
+      // Generate window of weeks around the active date
+      for (let i = -weekBuffer; i <= weekBuffer; i++) {
+        const start = weekStart.add(i * numDaysInWeek, 'day');
+        const week = generateWeek(start);
+        logger.debug(`[INIT] Week ${i + 1}:`, dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
+        weeks.push(week);
+      }
     }
 
     logger.debug('[INIT] Created', weeks.length, 'weeks');
     return weeks;
-  }, [selectedDate, startingDate, getWeekStart, generateWeek, numDaysInWeek]);
+  }, [selectedDate, startingDate, getWeekStart, generateWeek, numDaysInWeek, scrollable, weekBuffer]);
 
   // State - Fixed carousel window
   const [weeks, setWeeks] = useState(() => {
