@@ -8,11 +8,10 @@ import dayjs from 'dayjs';
  * Renders a single date item in the calendar strip
  * Optimized with React.memo to prevent unnecessary re-renders
  */
-const CalendarDateItem = memo(({
+const CalendarDateItem = memo(({ 
   date,
   dateNumber,
   dayName,
-  month,
   isActive,
   isToday,
   isWeekend,
@@ -184,7 +183,6 @@ CalendarDateItem.propTypes = {
   date: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.object]).isRequired,
   dateNumber: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   dayName: PropTypes.string.isRequired,
-  month: PropTypes.number.isRequired,
   isActive: PropTypes.bool,
   isToday: PropTypes.bool,
   isWeekend: PropTypes.bool,
