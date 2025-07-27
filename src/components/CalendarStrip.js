@@ -169,6 +169,7 @@ const CalendarStrip = ({
   });
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
   const [leftWidth, setLeftWidth] = useState(0);
+  const [rightWidth, setRightWidth] = useState(0);
 
   // Handle selectedDate changes
   useEffect(() => {
@@ -374,7 +375,11 @@ const CalendarStrip = ({
     setLeftWidth(e.nativeEvent.layout.width);
   }, []);
 
-  const contentWidth = Math.max(viewWidth - leftWidth, 0);
+  const onRightLayout = useCallback(e => {
+    setRightWidth(e.nativeEvent.layout.width);
+  }, []);
+
+  const contentWidth = Math.max(viewWidth - leftWidth - rightWidth, 0);
 
   // Render week
   const renderWeek = useCallback(({ item: week }) => {
@@ -505,7 +510,7 @@ const CalendarStrip = ({
           </View>
         )}
         
-        <View>{rightSelector}</View>
+        <View onLayout={onRightLayout}>{rightSelector}</View>
       </View>
     </View>
   );
