@@ -226,65 +226,83 @@ const CalendarStrip = ({
   const scrollOffsetRef = useRef(0);
   const isShiftingRef = useRef(false);
   
+  const shiftLeft = useCallback(() => {
+    if (isShiftingRef.current) return false;
+    isShiftingRef.current = true;
+
+    let shifted = false;
+    setWeeks(currentWeeks => {
+      const firstWeek = currentWeeks[0];
+      const prevWeekStart = getWeekStart(firstWeek.startDate).subtract(numDaysInWeek, 'day');
+      const prevWeekEnd = dayjs(prevWeekStart).add(numDaysInWeek - 1, 'day');
+
+      if (minDate && prevWeekEnd.isBefore(dayjs(minDate), 'day')) {
+        return currentWeeks;
+      }
+
+      shifted = true;
+      const newWeek = generateWeek(prevWeekStart);
+      return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
+    });
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
+      isShiftingRef.current = false;
+    }, 0);
+
+    return shifted;
+  }, [generateWeek, getWeekStart, numDaysInWeek, minDate, WINDOW_SIZE]);
+
+  const shiftRight = useCallback(() => {
+    if (isShiftingRef.current) return false;
+    isShiftingRef.current = true;
+
+    let shifted = false;
+    setWeeks(currentWeeks => {
+      const lastWeek = currentWeeks[currentWeeks.length - 1];
+      const nextWeekStart = getWeekStart(lastWeek.startDate).add(numDaysInWeek, 'day');
+
+      if (maxDate && dayjs(nextWeekStart).isAfter(dayjs(maxDate), 'day')) {
+        return currentWeeks;
+      }
+
+      shifted = true;
+      const newWeek = generateWeek(nextWeekStart);
+      return [...currentWeeks.slice(1), newWeek];
+    });
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
+      isShiftingRef.current = false;
+    }, 0);
+
+    return shifted;
+  }, [generateWeek, getWeekStart, numDaysInWeek, maxDate, WINDOW_SIZE]);
+
   const onScroll = useCallback((event) => {
     const currentOffset = event.nativeEvent.contentOffset.x;
     const itemWidth = contentWidth;
     const threshold = itemWidth * 0.3; // 30% threshold for instant response
-    
-    // Prevent multiple rapid shifts
-    if (isShiftingRef.current) return;
-    
+
     if (__DEV__) {
       console.log('[CAROUSEL] Scroll offset:', currentOffset, 'Threshold:', threshold);
     }
-    
+
     // Left threshold: user scrolled 30% into previous week
     if (currentOffset < threshold) {
       if (__DEV__) {
         console.log('[CAROUSEL] Left threshold reached - instant shift');
       }
-      isShiftingRef.current = true;
-      
-      setWeeks(currentWeeks => {
-        const firstWeek = currentWeeks[0];
-        const prevWeekStart = getWeekStart(firstWeek.startDate).subtract(numDaysInWeek, 'day');
-        const newWeek = generateWeek(prevWeekStart);
-        if (__DEV__) {
-          console.log('[CAROUSEL] Adding previous week:', dayjs(newWeek.startDate).format('YYYY-MM-DD'));
-        }
-        return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
-      });
-      
-      // Instantly reset to center
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
-        isShiftingRef.current = false;
-      }, 0);
+      shiftLeft();
     }
-    // Right threshold: user scrolled 30% into next week  
+    // Right threshold: user scrolled 30% into next week
     else if (currentOffset > itemWidth * 2 - threshold) {
       if (__DEV__) {
         console.log('[CAROUSEL] Right threshold reached - instant shift');
       }
-      isShiftingRef.current = true;
-      
-      setWeeks(currentWeeks => {
-        const lastWeek = currentWeeks[currentWeeks.length - 1];
-        const nextWeekStart = getWeekStart(lastWeek.startDate).add(numDaysInWeek, 'day');
-        const newWeek = generateWeek(nextWeekStart);
-        if (__DEV__) {
-          console.log('[CAROUSEL] Adding next week:', dayjs(newWeek.startDate).format('YYYY-MM-DD'));
-        }
-        return [...currentWeeks.slice(1), newWeek];
-      });
-      
-      // Instantly reset to center
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
-        isShiftingRef.current = false;
-      }, 0);
+      shiftRight();
     }
-  }, [contentWidth, getWeekStart, generateWeek, numDaysInWeek, WINDOW_SIZE]);
+  }, [contentWidth, shiftLeft, shiftRight]);
   
   // Simplified viewable items handler - just for callbacks
   const onViewableItemsChanged = useCallback(({ viewableItems }) => {
@@ -319,14 +337,18 @@ const CalendarStrip = ({
       const centerWeek = weeks[CENTER_INDEX];
       if (centerWeek) {
         const nextWeekStart = getWeekStart(centerWeek.startDate).add(numDaysInWeek, 'day');
-        setActiveDate(nextWeekStart.toDate());
+        if (shiftRight()) {
+          setActiveDate(nextWeekStart.toDate());
+        }
       }
     },
     goToPreviousWeek: () => {
       const centerWeek = weeks[CENTER_INDEX];
       if (centerWeek) {
         const prevWeekStart = getWeekStart(centerWeek.startDate).subtract(numDaysInWeek, 'day');
-        setActiveDate(prevWeekStart.toDate());
+        if (shiftLeft()) {
+          setActiveDate(prevWeekStart.toDate());
+        }
       }
     }
   }));
