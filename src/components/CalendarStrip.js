@@ -159,7 +159,14 @@ const CalendarStrip = ({
 
     logger.debug('[INIT] Created', weeks.length, 'weeks');
     return weeks;
-  }, [selectedDate, startingDate, getWeekStart, generateWeek, numDaysInWeek, scrollable, weekBuffer]);
+  }, [
+    selectedDate,
+    startingDate,
+    getWeekStart,
+    generateWeek,
+    numDaysInWeek,
+    weekBuffer,
+  ]);
 
   // State - Fixed carousel window
   const [weeks, setWeeks] = useState(() => {
@@ -277,7 +284,14 @@ const CalendarStrip = ({
     flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
 
     return shifted;
-  }, [generateWeek, getWeekStart, numDaysInWeek, minDate, WINDOW_SIZE]);
+  }, [
+    generateWeek,
+    getWeekStart,
+    numDaysInWeek,
+    minDate,
+    WINDOW_SIZE,
+    weekBuffer,
+  ]);
 
   const shiftRight = useCallback(() => {
     if (isShiftingRef.current) {
@@ -303,7 +317,14 @@ const CalendarStrip = ({
     flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
 
     return shifted;
-  }, [generateWeek, getWeekStart, numDaysInWeek, maxDate, WINDOW_SIZE]);
+  }, [
+    generateWeek,
+    getWeekStart,
+    numDaysInWeek,
+    maxDate,
+    WINDOW_SIZE,
+    weekBuffer,
+  ]);
 
   const onScrollEnd = useCallback(
     (event) => {
@@ -351,7 +372,14 @@ const CalendarStrip = ({
       const year = middleDate.format('YYYY');
       updateMonthYear(month, year);
     }
-  }, [weeks, onWeekChanged, updateMonthYear, numDaysInWeek, CENTER_INDEX]);
+  }, [
+    weeks,
+    onWeekChanged,
+    updateMonthYear,
+    numDaysInWeek,
+    CENTER_INDEX,
+    weekBuffer,
+  ]);
 
   // Imperative methods
   React.useImperativeHandle(calendarRef, () => {
