@@ -1,5 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { FlatList } from 'react-native';
 import CalendarStrip from '../src/components/CalendarStrip';
 
 describe('CalendarStrip functional API', () => {
@@ -30,5 +31,48 @@ describe('CalendarStrip functional API', () => {
     expect(typeof ref.current.goToPreviousWeek).toBe('function');
     expect(typeof ref.current.getSelectedDate).toBe('function');
     expect(typeof ref.current.scrollToDate).toBe('function');
+  });
+
+  test('swiping right triggers goToNextWeek once', () => {
+    const ref = React.createRef();
+    const { UNSAFE_getByType } = render(
+      <CalendarStrip showMonth={false} scrollerPaging ref={ref} />
+    );
+
+    const flatList = UNSAFE_getByType(FlatList);
+    const spy = jest.spyOn(ref.current, 'goToNextWeek');
+
+    // Simulate a swipe to the right with momentum
+    flatList.props.onScroll({
+      nativeEvent: { contentOffset: { x: 400, y: 0 } }
+    });
+    if (flatList.props.onMomentumScrollEnd) {
+      flatList.props.onMomentumScrollEnd({
+        nativeEvent: { contentOffset: { x: 400, y: 0 } }
+      });
+    }
+
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  test('swiping left triggers goToPreviousWeek once', () => {
+    const ref = React.createRef();
+    const { UNSAFE_getByType } = render(
+      <CalendarStrip showMonth={false} scrollerPaging ref={ref} />
+    );
+
+    const flatList = UNSAFE_getByType(FlatList);
+    const spy = jest.spyOn(ref.current, 'goToPreviousWeek');
+
+    flatList.props.onScroll({
+      nativeEvent: { contentOffset: { x: -400, y: 0 } }
+    });
+    if (flatList.props.onMomentumScrollEnd) {
+      flatList.props.onMomentumScrollEnd({
+        nativeEvent: { contentOffset: { x: -400, y: 0 } }
+      });
+    }
+
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });
