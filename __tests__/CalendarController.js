@@ -106,22 +106,6 @@ describe('CalendarController', () => {
       expect(week.days.length).toBe(5);
     });
     
-    it('should handle 2-week view with useIsoWeekday', () => {
-      const customController = new CalendarController({
-        useIsoWeekday: true,
-        is2WeekView: true
-      });
-      
-      // 임의의 날짜로 주 생성
-      const startDate = dayjs('2025-01-06'); 
-      const week = customController._generateWeek(startDate);
-      
-      // 결과가 유효한지 확인
-      expect(week).toBeDefined();
-      expect(week.days).toBeDefined();
-      expect(week.startDate).toBeDefined();
-      expect(week.endDate).toBeDefined();
-    });
   });
   
   describe('findWeekIndexByDate', () => {

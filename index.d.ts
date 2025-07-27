@@ -395,7 +395,6 @@ export class CalendarController {
     numDaysInWeek?: number;
     minDate?: Date;
     maxDate?: Date;
-    is2WeekView?: boolean;
   });
   addListener(listener: Function): () => void;
   jumpToDate(date: Date): void;
