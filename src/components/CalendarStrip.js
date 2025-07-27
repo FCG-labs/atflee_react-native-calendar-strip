@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import {
   View,
   StyleSheet,
@@ -551,5 +552,141 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+CalendarStrip.propTypes = {
+  // Calendar configuration
+  selectedDate: PropTypes.oneOfType([
+    PropTypes.instanceOf(Date),
+    PropTypes.object
+  ]),
+  startingDate: PropTypes.oneOfType([
+    PropTypes.instanceOf(Date),
+    PropTypes.object
+  ]),
+  minDate: PropTypes.oneOfType([
+    PropTypes.instanceOf(Date),
+    PropTypes.object
+  ]),
+  maxDate: PropTypes.oneOfType([
+    PropTypes.instanceOf(Date),
+    PropTypes.object
+  ]),
+  useIsoWeekday: PropTypes.bool,
+  numDaysInWeek: PropTypes.number,
+  scrollable: PropTypes.bool,
+  scrollerPaging: PropTypes.bool,
+
+  // Header configuration
+  showMonth: PropTypes.bool,
+  calendarHeaderFormat: PropTypes.string,
+  calendarHeaderPosition: PropTypes.oneOf(['top', 'bottom']),
+  calendarHeaderStyle: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array
+  ]),
+
+  // Styling
+  style: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  calendarColor: PropTypes.string,
+  highlightColor: PropTypes.string,
+  dateNameStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  dateNumberStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  highlightDateNameStyle: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array
+  ]),
+  highlightDateNumberStyle: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array
+  ]),
+  dayContainerStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  disabledDateOpacity: PropTypes.number,
+  styleWeekend: PropTypes.bool,
+
+  // Display options
+  showDayName: PropTypes.bool,
+  showDayNumber: PropTypes.bool,
+  upperCaseDays: PropTypes.bool,
+  allowDayTextScaling: PropTypes.bool,
+
+  // Events and callbacks
+  onDateSelected: PropTypes.func,
+  onWeekChanged: PropTypes.func,
+  onHeaderSelected: PropTypes.func,
+  updateMonthYear: PropTypes.func,
+
+  // Custom components
+  dayComponent: PropTypes.func,
+  leftSelector: PropTypes.node,
+  rightSelector: PropTypes.node,
+
+  // Markers
+  markedDates: PropTypes.array,
+  markedDatesStyle: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array
+  ]),
+  markerComponent: PropTypes.func,
+
+  // Reference
+  calendarRef: PropTypes.oneOfType([
+    PropTypes.func,
+    PropTypes.shape({ current: PropTypes.any })
+  ])
+};
+
+CalendarStrip.defaultProps = {
+  selectedDate: new Date(),
+  startingDate: new Date(),
+  minDate: undefined,
+  maxDate: undefined,
+  useIsoWeekday: false,
+  numDaysInWeek: 7,
+  scrollable: true,
+  scrollerPaging: true,
+
+  // Header configuration defaults
+  showMonth: true,
+  calendarHeaderFormat: 'MMMM YYYY',
+  calendarHeaderPosition: 'top',
+  calendarHeaderStyle: {},
+
+  // Styling defaults
+  style: {},
+  calendarColor: '#fff',
+  highlightColor: '#000',
+  dateNameStyle: {},
+  dateNumberStyle: {},
+  highlightDateNameStyle: {},
+  highlightDateNumberStyle: {},
+  dayContainerStyle: {},
+  disabledDateOpacity: 0.3,
+  styleWeekend: false,
+
+  // Display options defaults
+  showDayName: true,
+  showDayNumber: true,
+  upperCaseDays: false,
+  allowDayTextScaling: true,
+
+  // Events and callbacks
+  onDateSelected: undefined,
+  onWeekChanged: undefined,
+  onHeaderSelected: undefined,
+  updateMonthYear: undefined,
+
+  // Custom components
+  dayComponent: undefined,
+  leftSelector: undefined,
+  rightSelector: undefined,
+
+  // Markers
+  markedDates: [],
+  markedDatesStyle: {},
+  markerComponent: undefined,
+
+  // Reference
+  calendarRef: undefined
+};
 
 export default CalendarStrip;
