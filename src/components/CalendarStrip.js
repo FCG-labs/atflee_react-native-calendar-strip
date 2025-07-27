@@ -230,61 +230,59 @@ const CalendarStrip = ({
     const currentOffset = event.nativeEvent.contentOffset.x;
     const itemWidth = contentWidth;
     const threshold = itemWidth * 0.3; // 30% threshold for instant response
-    
+
     // Prevent multiple rapid shifts
     if (isShiftingRef.current) return;
-    
+
     if (__DEV__) {
       console.log('[CAROUSEL] Scroll offset:', currentOffset, 'Threshold:', threshold);
     }
-    
+
     // Left threshold: user scrolled 30% into previous week
     if (currentOffset < threshold) {
-      if (__DEV__) {
-        console.log('[CAROUSEL] Left threshold reached - instant shift');
-      }
-      isShiftingRef.current = true;
-      
-      setWeeks(currentWeeks => {
-        const firstWeek = currentWeeks[0];
-        const prevWeekStart = getWeekStart(firstWeek.startDate).subtract(numDaysInWeek, 'day');
+      const firstWeek = weeks[0];
+      const prevWeekStart = getWeekStart(firstWeek.startDate).subtract(numDaysInWeek, 'day');
+      const prevWeekEnd = prevWeekStart.add(numDaysInWeek - 1, 'day');
+
+      if (!minDate || !prevWeekEnd.isBefore(dayjs(minDate), 'day')) {
+        if (__DEV__) {
+          console.log('[CAROUSEL] Left threshold reached - instant shift');
+        }
+        isShiftingRef.current = true;
+
         const newWeek = generateWeek(prevWeekStart);
-        if (__DEV__) {
-          console.log('[CAROUSEL] Adding previous week:', dayjs(newWeek.startDate).format('YYYY-MM-DD'));
-        }
-        return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
-      });
-      
-      // Instantly reset to center
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
-        isShiftingRef.current = false;
-      }, 0);
-    }
-    // Right threshold: user scrolled 30% into next week  
-    else if (currentOffset > itemWidth * 2 - threshold) {
-      if (__DEV__) {
-        console.log('[CAROUSEL] Right threshold reached - instant shift');
+        setWeeks(currentWeeks => [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)]);
+
+        // Instantly reset to center
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
+          isShiftingRef.current = false;
+        }, 0);
       }
-      isShiftingRef.current = true;
-      
-      setWeeks(currentWeeks => {
-        const lastWeek = currentWeeks[currentWeeks.length - 1];
-        const nextWeekStart = getWeekStart(lastWeek.startDate).add(numDaysInWeek, 'day');
-        const newWeek = generateWeek(nextWeekStart);
-        if (__DEV__) {
-          console.log('[CAROUSEL] Adding next week:', dayjs(newWeek.startDate).format('YYYY-MM-DD'));
-        }
-        return [...currentWeeks.slice(1), newWeek];
-      });
-      
-      // Instantly reset to center
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
-        isShiftingRef.current = false;
-      }, 0);
     }
-  }, [contentWidth, getWeekStart, generateWeek, numDaysInWeek, WINDOW_SIZE]);
+    // Right threshold: user scrolled 30% into next week
+    else if (currentOffset > itemWidth * 2 - threshold) {
+      const lastWeek = weeks[weeks.length - 1];
+      const nextWeekStart = getWeekStart(lastWeek.startDate).add(numDaysInWeek, 'day');
+      const nextWeekEnd = nextWeekStart.add(numDaysInWeek - 1, 'day');
+
+      if (!maxDate || !nextWeekStart.isAfter(dayjs(maxDate), 'day')) {
+        if (__DEV__) {
+          console.log('[CAROUSEL] Right threshold reached - instant shift');
+        }
+        isShiftingRef.current = true;
+
+        const newWeek = generateWeek(nextWeekStart);
+        setWeeks(currentWeeks => [...currentWeeks.slice(1), newWeek]);
+
+        // Instantly reset to center
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
+          isShiftingRef.current = false;
+        }, 0);
+      }
+    }
+  }, [contentWidth, getWeekStart, generateWeek, numDaysInWeek, WINDOW_SIZE, weeks, minDate, maxDate]);
   
   // Simplified viewable items handler - just for callbacks
   const onViewableItemsChanged = useCallback(({ viewableItems }) => {
