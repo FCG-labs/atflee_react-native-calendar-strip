@@ -122,12 +122,18 @@ const CalendarStrip = ({
 
   // Initialize carousel window
   const initCarousel = useCallback(() => {
-    console.log('[INIT] Creating carousel window');
+    if (__DEV__) {
+      console.log('[INIT] Creating carousel window');
+    }
     const currentDate = selectedDate || startingDate || new Date();
-    console.log('[INIT] Current date:', dayjs(currentDate).format('YYYY-MM-DD'));
+    if (__DEV__) {
+      console.log('[INIT] Current date:', dayjs(currentDate).format('YYYY-MM-DD'));
+    }
     
     const weekStart = getWeekStart(currentDate);
-    console.log('[INIT] Week start:', weekStart.format('YYYY-MM-DD'));
+    if (__DEV__) {
+      console.log('[INIT] Week start:', weekStart.format('YYYY-MM-DD'));
+    }
     
     const weeks = [];
     
@@ -135,22 +141,30 @@ const CalendarStrip = ({
     for (let i = -1; i <= 1; i++) {
       const start = weekStart.add(i * numDaysInWeek, 'day');
       const week = generateWeek(start);
-      console.log(`[INIT] Week ${i + 1}:`, dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
+      if (__DEV__) {
+        console.log(`[INIT] Week ${i + 1}:`, dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
+      }
       weeks.push(week);
     }
     
-    console.log('[INIT] Created', weeks.length, 'weeks');
+    if (__DEV__) {
+      console.log('[INIT] Created', weeks.length, 'weeks');
+    }
     return weeks;
   }, [selectedDate, startingDate, getWeekStart, generateWeek, numDaysInWeek]);
 
   // State - Fixed carousel window
   const [weeks, setWeeks] = useState(() => {
-    console.log('[STATE] Initializing weeks state');
+    if (__DEV__) {
+      console.log('[STATE] Initializing weeks state');
+    }
     return initCarousel();
   });
   const [activeDate, setActiveDate] = useState(() => {
     const date = selectedDate || startingDate || new Date();
-    console.log('[STATE] Initial active date:', dayjs(date).format('YYYY-MM-DD'));
+    if (__DEV__) {
+      console.log('[STATE] Initial active date:', dayjs(date).format('YYYY-MM-DD'));
+    }
     return date;
   });
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
@@ -158,34 +172,48 @@ const CalendarStrip = ({
 
   // Handle selectedDate changes
   useEffect(() => {
-    console.log('[EFFECT] selectedDate changed:', selectedDate ? dayjs(selectedDate).format('YYYY-MM-DD') : 'null');
-    console.log('[EFFECT] activeDate:', dayjs(activeDate).format('YYYY-MM-DD'));
+    if (__DEV__) {
+      console.log('[EFFECT] selectedDate changed:', selectedDate ? dayjs(selectedDate).format('YYYY-MM-DD') : 'null');
+      console.log('[EFFECT] activeDate:', dayjs(activeDate).format('YYYY-MM-DD'));
+    }
     
     if (selectedDate && !dayjs(selectedDate).isSame(dayjs(activeDate), 'day')) {
-      console.log('[EFFECT] Setting new active date');
+      if (__DEV__) {
+        console.log('[EFFECT] Setting new active date');
+      }
       setActiveDate(selectedDate);
       
       // Check if selectedDate is in current window
       const targetWeekStart = getWeekStart(selectedDate);
-      console.log('[EFFECT] Target week start:', targetWeekStart.format('YYYY-MM-DD'));
+      if (__DEV__) {
+        console.log('[EFFECT] Target week start:', targetWeekStart.format('YYYY-MM-DD'));
+      }
       
       const isInWindow = weeks.some(week => {
         const weekStart = getWeekStart(week.startDate);
         const match = weekStart.isSame(targetWeekStart, 'day');
-        console.log('[EFFECT] Checking week:', weekStart.format('YYYY-MM-DD'), 'matches:', match);
+        if (__DEV__) {
+          console.log('[EFFECT] Checking week:', weekStart.format('YYYY-MM-DD'), 'matches:', match);
+        }
         return match;
       });
       
-      console.log('[EFFECT] Is in current window:', isInWindow);
+      if (__DEV__) {
+        console.log('[EFFECT] Is in current window:', isInWindow);
+      }
       
       if (!isInWindow) {
-        console.log('[EFFECT] Rebuilding carousel around selected date');
+        if (__DEV__) {
+          console.log('[EFFECT] Rebuilding carousel around selected date');
+        }
         const newWeeks = initCarousel();
         setWeeks(newWeeks);
       }
       
       // Always scroll to center
-      console.log('[EFFECT] Scrolling to center index:', CENTER_INDEX);
+      if (__DEV__) {
+        console.log('[EFFECT] Scrolling to center index:', CENTER_INDEX);
+      }
       setTimeout(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToIndex({ index: CENTER_INDEX, animated: true });
@@ -206,18 +234,24 @@ const CalendarStrip = ({
     // Prevent multiple rapid shifts
     if (isShiftingRef.current) return;
     
-    console.log('[CAROUSEL] Scroll offset:', currentOffset, 'Threshold:', threshold);
+    if (__DEV__) {
+      console.log('[CAROUSEL] Scroll offset:', currentOffset, 'Threshold:', threshold);
+    }
     
     // Left threshold: user scrolled 30% into previous week
     if (currentOffset < threshold) {
-      console.log('[CAROUSEL] Left threshold reached - instant shift');
+      if (__DEV__) {
+        console.log('[CAROUSEL] Left threshold reached - instant shift');
+      }
       isShiftingRef.current = true;
       
       setWeeks(currentWeeks => {
         const firstWeek = currentWeeks[0];
         const prevWeekStart = getWeekStart(firstWeek.startDate).subtract(numDaysInWeek, 'day');
         const newWeek = generateWeek(prevWeekStart);
-        console.log('[CAROUSEL] Adding previous week:', dayjs(newWeek.startDate).format('YYYY-MM-DD'));
+        if (__DEV__) {
+          console.log('[CAROUSEL] Adding previous week:', dayjs(newWeek.startDate).format('YYYY-MM-DD'));
+        }
         return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
       });
       
@@ -229,14 +263,18 @@ const CalendarStrip = ({
     }
     // Right threshold: user scrolled 30% into next week  
     else if (currentOffset > itemWidth * 2 - threshold) {
-      console.log('[CAROUSEL] Right threshold reached - instant shift');
+      if (__DEV__) {
+        console.log('[CAROUSEL] Right threshold reached - instant shift');
+      }
       isShiftingRef.current = true;
       
       setWeeks(currentWeeks => {
         const lastWeek = currentWeeks[currentWeeks.length - 1];
         const nextWeekStart = getWeekStart(lastWeek.startDate).add(numDaysInWeek, 'day');
         const newWeek = generateWeek(nextWeekStart);
-        console.log('[CAROUSEL] Adding next week:', dayjs(newWeek.startDate).format('YYYY-MM-DD'));
+        if (__DEV__) {
+          console.log('[CAROUSEL] Adding next week:', dayjs(newWeek.startDate).format('YYYY-MM-DD'));
+        }
         return [...currentWeeks.slice(1), newWeek];
       });
       
@@ -295,23 +333,33 @@ const CalendarStrip = ({
 
   // Date selection handler
   const handleDateSelection = useCallback(date => {
-    console.log('[DATE] Date selected:', dayjs(date).format('YYYY-MM-DD'));
+    if (__DEV__) {
+      console.log('[DATE] Date selected:', dayjs(date).format('YYYY-MM-DD'));
+    }
     
     const dateObj = dayjs(date);
     if (minDate && dateObj.isBefore(dayjs(minDate), 'day')) {
-      console.log('[DATE] Date before minDate, ignoring');
+      if (__DEV__) {
+        console.log('[DATE] Date before minDate, ignoring');
+      }
       return;
     }
     if (maxDate && dateObj.isAfter(dayjs(maxDate), 'day')) {
-      console.log('[DATE] Date after maxDate, ignoring');
+      if (__DEV__) {
+        console.log('[DATE] Date after maxDate, ignoring');
+      }
       return;
     }
 
-    console.log('[DATE] Setting active date to:', dayjs(date).format('YYYY-MM-DD'));
+    if (__DEV__) {
+      console.log('[DATE] Setting active date to:', dayjs(date).format('YYYY-MM-DD'));
+    }
     setActiveDate(date);
     
     if (onDateSelected) {
-      console.log('[DATE] Calling onDateSelected callback');
+      if (__DEV__) {
+        console.log('[DATE] Calling onDateSelected callback');
+      }
       onDateSelected(date);
     }
   }, [onDateSelected, minDate, maxDate]);
