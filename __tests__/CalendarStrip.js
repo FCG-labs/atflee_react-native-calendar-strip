@@ -96,4 +96,20 @@ describe('CalendarStrip functional API', () => {
     expect(pairs2).toBe(pairs1);
     expect(pairs2[0].onViewableItemsChanged).toBe(secondCb);
   });
+
+  test('updating weekBuffer re-creates weeks array', () => {
+    const ref = React.createRef();
+    const { rerender } = render(
+      <CalendarStrip showMonth={false} weekBuffer={1} ref={ref} />
+    );
+
+    const weeksBefore = ref.current.getWeeks();
+    expect(weeksBefore).toHaveLength(3);
+
+    rerender(<CalendarStrip showMonth={false} weekBuffer={2} ref={ref} />);
+
+    const weeksAfter = ref.current.getWeeks();
+    expect(weeksAfter).toHaveLength(5);
+    expect(weeksAfter).not.toBe(weeksBefore);
+  });
 });
