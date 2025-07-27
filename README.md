@@ -335,7 +335,7 @@ AppRegistry.registerComponent('Example', () => Example);
 | **`startingDate`**   | Date to be used for centering the calendar/showing the week based on that date. It is internally wrapped by `dayjs` so it accepts both `Date` and `dayjs Date`.  | Any      |
 | **`selectedDate`**   | Date to be used as pre selected Date. It is internally wrapped by `dayjs` so it accepts both `Date` and `dayjs Date`.                                            | Any      |
 | **`onDateSelected`** | Function to be used as a callback when a date is selected. Receives param `date` dayjs date.                                                                      | Function |
-| **`onWeekChanged`**  | Function to be used as a callback when a week is changed. Receives params `(start, end)` as `dayjs.Dayjs` objects. | Function |
+| **`onWeekChanged`**  | Callback fired when the visible week changes. This also triggers after the list recenters itself (for example after a swipe) so that external state stays in sync. Receives params `(start, end)` as `dayjs.Dayjs` objects. | Function |
 | **`onWeekScrollStart`**| Function to be used as a callback in `scrollable` mode when dates page starts gliding. Receives params `(start, end)` dayjs dates.                              | Function |
 | **`onWeekScrollEnd`**| Function to be used as a callback in `scrollable` mode when dates page stops gliding. Receives params `(start, end)` dayjs dates.                                 | Function |
 | **`onHeaderSelected`**| Function to be used as a callback when the header is selected. Receives param object `{weekStartDate, weekEndDate}` dayjs dates.                                 | Function |
@@ -348,6 +348,7 @@ AppRegistry.registerComponent('Example', () => Example);
 | **`datesBlacklist`** | Array of dates that are disabled, or a function callback. Same format as _datesWhitelist_. This overrides dates in _datesWhitelist_.                               | Array or Func |
 | **`markedDates`**    | Dates that are marked with dots or lines. Format as <a href="#markeddates-example">markedDatesFormat</a>.                                                          | Array or Func | **[]**
 | **`scrollToOnSetSelectedDate`** | Controls whether to reposition the scroller to the date passed to `setSelectedDate`.                                                                         | Bool     | **`True`** |
+> The week list recenters itself after swipe actions. Using `onViewableItemsChanged` alone may miss these updates. Week-change callbacks fire from internal state changes so your data stays synchronized.
 
 
 ##### datesWhitelist Array Example
