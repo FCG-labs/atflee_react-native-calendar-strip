@@ -335,7 +335,7 @@ AppRegistry.registerComponent('Example', () => Example);
 | **`startingDate`**   | Date to be used for centering the calendar/showing the week based on that date. It is internally wrapped by `dayjs` so it accepts both `Date` and `dayjs Date`.  | Any      |
 | **`selectedDate`**   | Date to be used as pre selected Date. It is internally wrapped by `dayjs` so it accepts both `Date` and `dayjs Date`.                                            | Any      |
 | **`onDateSelected`** | Function to be used as a callback when a date is selected. Receives param `date` dayjs date.                                                                      | Function |
-| **`onWeekChanged`**  | Function to be used as a callback when a week is changed. Receives params `(start, end)` dayjs dates.                                                             | Function |
+| **`onWeekChanged`**  | Function to be used as a callback when a week is changed. Receives params `(start, end)` as `dayjs.Dayjs` objects. | Function |
 | **`onWeekScrollStart`**| Function to be used as a callback in `scrollable` mode when dates page starts gliding. Receives params `(start, end)` dayjs dates.                              | Function |
 | **`onWeekScrollEnd`**| Function to be used as a callback in `scrollable` mode when dates page stops gliding. Receives params `(start, end)` dayjs dates.                                 | Function |
 | **`onHeaderSelected`**| Function to be used as a callback when the header is selected. Receives param object `{weekStartDate, weekEndDate}` dayjs dates.                                 | Function |

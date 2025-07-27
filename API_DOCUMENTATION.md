@@ -71,7 +71,7 @@ yarn add atflee_react-native-calendar-strip
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `onDateSelected` | `Function` | `undefined` | 날짜 선택 시 호출되는 콜백: `(date) => void` |
-| `onWeekChanged` | `Function` | `undefined` | 주 변경 시 호출되는 콜백: `(start, end) => void` |
+| `onWeekChanged` | `Function` | `undefined` | 주 변경 시 호출되는 콜백: `(start: Dayjs, end: Dayjs) => void` |
 | `onHeaderSelected` | `Function` | `undefined` | 헤더 선택 시 호출되는 콜백: `() => void` |
 | `updateMonthYear` | `Function` | `undefined` | 표시되는 월/연도 업데이트 시 호출되는 콜백: `(month, year) => void` (`month`: `MM`, `year`: `YYYY`) |
 
