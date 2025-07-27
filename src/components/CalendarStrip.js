@@ -294,8 +294,13 @@ const CalendarStrip = ({
     }
     
     if (centerWeek && updateMonthYear) {
-      const middleDate = dayjs(centerWeek.startDate).add(Math.floor(numDaysInWeek / 2), 'day');
-      updateMonthYear(middleDate);
+      const middleDate = dayjs(centerWeek.startDate).add(
+        Math.floor(numDaysInWeek / 2),
+        'day'
+      );
+      const month = middleDate.format('MM');
+      const year = middleDate.format('YYYY');
+      updateMonthYear(month, year);
     }
   }, [weeks, onWeekChanged, updateMonthYear, numDaysInWeek, CENTER_INDEX]);
 
