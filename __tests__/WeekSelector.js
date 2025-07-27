@@ -12,12 +12,7 @@ const today = dayjs();
 describe("WeekSelector Component", () => {
   it("should render without issues", () => {
     const component = shallow(
-      <WeekSelector
-        controlDate={today}
-        weekStartDate={today}
-        weekEndDate={today.clone().add(1, "week")}
-        size={50}
-      />
+      <WeekSelector size={50} />
     );
 
     expect(component).toBeTruthy();
