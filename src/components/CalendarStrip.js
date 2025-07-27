@@ -169,6 +169,7 @@ const CalendarStrip = ({
   });
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
   const [leftWidth, setLeftWidth] = useState(0);
+  const [rightWidth, setRightWidth] = useState(0);
 
   // Handle selectedDate changes
   useEffect(() => {
@@ -223,7 +224,6 @@ const CalendarStrip = ({
   }, [selectedDate, activeDate, weeks, getWeekStart, initCarousel]);
 
   // True Carousel: Real-time scroll threshold detection
-  const scrollOffsetRef = useRef(0);
   const isShiftingRef = useRef(false);
   
   const shiftLeft = useCallback(() => {
@@ -283,7 +283,6 @@ const CalendarStrip = ({
     const currentOffset = event.nativeEvent.contentOffset.x;
     const itemWidth = contentWidth;
     const threshold = itemWidth * 0.3; // 30% threshold for instant response
-
     if (__DEV__) {
       console.log('[CAROUSEL] Scroll offset:', currentOffset, 'Threshold:', threshold);
     }
@@ -303,6 +302,7 @@ const CalendarStrip = ({
       shiftRight();
     }
   }, [contentWidth, shiftLeft, shiftRight]);
+
   
   // Simplified viewable items handler - just for callbacks
   const onViewableItemsChanged = useCallback(({ viewableItems }) => {
@@ -396,7 +396,11 @@ const CalendarStrip = ({
     setLeftWidth(e.nativeEvent.layout.width);
   }, []);
 
-  const contentWidth = Math.max(viewWidth - leftWidth, 0);
+  const onRightLayout = useCallback(e => {
+    setRightWidth(e.nativeEvent.layout.width);
+  }, []);
+
+  const contentWidth = Math.max(viewWidth - leftWidth - rightWidth, 0);
 
   // Render week
   const renderWeek = useCallback(({ item: week }) => {
@@ -527,7 +531,7 @@ const CalendarStrip = ({
           </View>
         )}
         
-        <View>{rightSelector}</View>
+        <View onLayout={onRightLayout}>{rightSelector}</View>
       </View>
     </View>
   );
