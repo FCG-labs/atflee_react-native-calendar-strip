@@ -342,7 +342,7 @@ const CalendarStrip = ({
               : day.date.format('ddd')
             }
             isToday={day.isToday}
-            isSelected={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
+            isActive={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
             isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
             isCurrentMonth={day.isCurrentMonth}
             onDateSelected={() => handleDateSelection(day.date)}
@@ -432,7 +432,7 @@ const CalendarStrip = ({
                   : day.date.format('ddd')
                 }
                 isToday={day.isToday}
-                isSelected={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
+                isActive={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
                 isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
                 isCurrentMonth={day.isCurrentMonth}
                 onDateSelected={() => handleDateSelection(day.date)}
