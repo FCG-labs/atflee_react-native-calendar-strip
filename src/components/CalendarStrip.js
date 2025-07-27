@@ -158,6 +158,24 @@ const CalendarStrip = ({
     logger.debug('[STATE] Initializing weeks state');
     return initCarousel();
   });
+
+  useEffect(() => {
+    const centerWeek = weeks[CENTER_INDEX];
+
+    if (centerWeek && onWeekChanged) {
+      onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
+    }
+
+    if (centerWeek && updateMonthYear) {
+      const middleDate = dayjs(centerWeek.startDate).add(
+        Math.floor(numDaysInWeek / 2),
+        'day'
+      );
+      const month = middleDate.format('MM');
+      const year = middleDate.format('YYYY');
+      updateMonthYear(month, year);
+    }
+  }, [weeks, onWeekChanged, updateMonthYear, numDaysInWeek]);
   const [activeDate, setActiveDate] = useState(() => {
     const date = selectedDate || startingDate || new Date();
     logger.debug('[STATE] Initial active date:', dayjs(date).format('YYYY-MM-DD'));
