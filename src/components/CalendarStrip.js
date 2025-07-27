@@ -246,10 +246,7 @@ const CalendarStrip = ({
       return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
     });
 
-    setTimeout(() => {
-      flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
-      isShiftingRef.current = false;
-    }, 0);
+    flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
 
     return shifted;
   }, [generateWeek, getWeekStart, numDaysInWeek, minDate, WINDOW_SIZE]);
@@ -272,10 +269,7 @@ const CalendarStrip = ({
       return [...currentWeeks.slice(1), newWeek];
     });
 
-    setTimeout(() => {
-      flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
-      isShiftingRef.current = false;
-    }, 0);
+    flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
 
     return shifted;
   }, [generateWeek, getWeekStart, numDaysInWeek, maxDate, WINDOW_SIZE]);
@@ -287,6 +281,13 @@ const CalendarStrip = ({
       const page = Math.round(itemWidth ? currentOffset / itemWidth : 1);
       if (__DEV__) {
         console.log('[CAROUSEL] Scroll end page:', page, 'offset:', currentOffset);
+      }
+
+      if (isShiftingRef.current) {
+        if (page === CENTER_INDEX) {
+          isShiftingRef.current = false;
+        }
+        return;
       }
 
       if (page === 0) {
