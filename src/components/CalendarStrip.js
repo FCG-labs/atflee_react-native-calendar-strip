@@ -1,4 +1,10 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+} from 'react';
 import PropTypes from 'prop-types';
 import {
   View,
@@ -68,6 +74,7 @@ const CalendarStrip = ({
   onWeekChanged,
   onHeaderSelected,
   updateMonthYear,
+  onRenderComplete,
   
   // Custom components
   dayComponent,
@@ -171,6 +178,11 @@ const CalendarStrip = ({
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
   const [leftWidth, setLeftWidth] = useState(0);
   const [rightWidth, setRightWidth] = useState(0);
+  const startTimeRef = useRef(
+    typeof performance !== 'undefined' && performance.now
+      ? performance.now()
+      : Date.now()
+  );
 
   // Handle selectedDate changes
   useEffect(() => {
@@ -212,17 +224,27 @@ const CalendarStrip = ({
         setWeeks(newWeeks);
       }
       
-      // Always scroll to center
-      if (__DEV__) {
-        console.log('[EFFECT] Scrolling to center index:', CENTER_INDEX);
-      }
-      setTimeout(() => {
-        if (flatListRef.current) {
-          flatListRef.current.scrollToIndex({ index: CENTER_INDEX, animated: true });
-        }
-      }, 100);
+      // Recenter will occur via layout effect
     }
   }, [selectedDate, activeDate, weeks, getWeekStart, initCarousel]);
+
+  // Initial centering once layout is calculated
+  useLayoutEffect(() => {
+    if (scrollerPaging && flatListRef.current) {
+      flatListRef.current.scrollToIndex({
+        index: CENTER_INDEX,
+        animated: scrollerPaging,
+      });
+    }
+
+    if (onRenderComplete && startTimeRef.current) {
+      const end =
+        typeof performance !== 'undefined' && performance.now
+          ? performance.now()
+          : Date.now();
+      onRenderComplete(end - startTimeRef.current);
+    }
+  }, [weeks, viewWidth, scrollerPaging, onRenderComplete]);
 
   // True Carousel: Real-time scroll threshold detection
   const isShiftingRef = useRef(false);
@@ -327,11 +349,6 @@ const CalendarStrip = ({
       const newWeeks = initCarousel();
       setWeeks(newWeeks);
 
-      setTimeout(() => {
-        if (flatListRef.current) {
-          flatListRef.current.scrollToIndex({ index: CENTER_INDEX, animated: true });
-        }
-      }, 100);
     };
 
     return {
@@ -619,6 +636,7 @@ CalendarStrip.propTypes = {
   onWeekChanged: PropTypes.func,
   onHeaderSelected: PropTypes.func,
   updateMonthYear: PropTypes.func,
+  onRenderComplete: PropTypes.func,
 
   // Custom components
   dayComponent: PropTypes.func,
@@ -679,6 +697,7 @@ CalendarStrip.defaultProps = {
   onWeekChanged: undefined,
   onHeaderSelected: undefined,
   updateMonthYear: undefined,
+  onRenderComplete: undefined,
 
   // Custom components
   dayComponent: undefined,

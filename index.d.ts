@@ -270,6 +270,12 @@ export interface CalendarStripProps {
    * @param year Four-digit year string ('YYYY')
    */
   updateMonthYear?: (month: string, year: string) => void;
+
+  /**
+   * Callback invoked after initial render is complete
+   * and the list has been centered. Receives the render time in ms.
+   */
+  onRenderComplete?: (renderTimeMs: number) => void;
   
   // Custom components
   /**
