@@ -6,6 +6,7 @@ class CalendarController {
       initialDate: options.initialDate || new Date(),
       useIsoWeekday: options.useIsoWeekday || false,
       numDaysInWeek: options.numDaysInWeek || 7,
+      weekBuffer: options.weekBuffer || 3,
       minDate: options.minDate ? dayjs(options.minDate) : undefined,
       maxDate: options.maxDate ? dayjs(options.maxDate) : undefined,
     };
@@ -19,7 +20,7 @@ class CalendarController {
   }
 
   _initialize() {
-    this._prepareWeeks(this._selectedDate, 3);
+    this._prepareWeeks(this._selectedDate, this._options.weekBuffer);
   }
 
   _getWeekStart(date) {
@@ -88,7 +89,7 @@ class CalendarController {
 
   jumpToDate(date) {
     this.selectDate(date);
-    this._prepareWeeks(dayjs(date), this._weeks.length || 3);
+    this._prepareWeeks(dayjs(date), this._options.weekBuffer);
   }
 
   goToNextWeek() {

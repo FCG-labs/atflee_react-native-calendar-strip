@@ -408,6 +408,10 @@ export class CalendarController {
     initialDate?: Date;
     useIsoWeekday?: boolean;
     numDaysInWeek?: number;
+    /**
+     * Number of weeks prepared around the selected date.
+     * @default 3
+     */
     weekBuffer?: number;
     minDate?: Date;
     maxDate?: Date;
