@@ -534,7 +534,7 @@ const CalendarStrip = ({
             getItemLayout={getItemLayout}
             onMomentumScrollEnd={onScrollEnd}
             onScrollEndDrag={onScrollEnd}
-            viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs}
+            viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
             initialScrollIndex={CENTER_INDEX}
           />
         ) : (
