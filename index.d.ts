@@ -266,6 +266,8 @@ export interface CalendarStripProps {
   
   /**
    * Callback to update month/year in parent component
+   * @param month Two-digit month string ('MM')
+   * @param year Four-digit year string ('YYYY')
    */
   updateMonthYear?: (month: string, year: string) => void;
   

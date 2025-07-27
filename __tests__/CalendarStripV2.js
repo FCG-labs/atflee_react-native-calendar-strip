@@ -1,5 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { FlatList } from 'react-native';
 import dayjs from 'dayjs';
 import CalendarStrip from '../src/components/CalendarStrip';
 import CalendarController from '../src/controllers/CalendarController';
@@ -107,6 +108,26 @@ describe('CalendarStrip Component', () => {
       );
       expect(getByTestId('calendar-strip')).toBeTruthy();
     });
+  });
+
+  it('should call updateMonthYear with formatted values', () => {
+    const updateMock = jest.fn();
+    const startDate = new Date(2024, 10, 15); // 15 Nov 2024
+
+    const { UNSAFE_getByType } = render(
+      <CalendarStrip
+        {...getBaseProps()}
+        startingDate={startDate}
+        updateMonthYear={updateMock}
+      />
+    );
+
+    const flatList = UNSAFE_getByType(FlatList);
+    const cb = flatList.props.viewabilityConfigCallbackPairs[0].onViewableItemsChanged;
+    cb({ viewableItems: [{ index: 1 }] });
+
+    const middleDate = dayjs(startDate).startOf('week').add(3, 'day');
+    expect(updateMock).toHaveBeenCalledWith(middleDate.format('MM'), middleDate.format('YYYY'));
   });
 
   // ref 테스트
