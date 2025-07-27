@@ -280,29 +280,23 @@ const CalendarStrip = ({
     return shifted;
   }, [generateWeek, getWeekStart, numDaysInWeek, maxDate, WINDOW_SIZE]);
 
-  const onScroll = useCallback((event) => {
-    const currentOffset = event.nativeEvent.contentOffset.x;
-    const itemWidth = contentWidth;
-    const threshold = itemWidth * 0.3; // 30% threshold for instant response
-    if (__DEV__) {
-      console.log('[CAROUSEL] Scroll offset:', currentOffset, 'Threshold:', threshold);
-    }
+  const onScrollEnd = useCallback(
+    (event) => {
+      const currentOffset = event.nativeEvent.contentOffset.x;
+      const itemWidth = contentWidth;
+      const page = Math.round(itemWidth ? currentOffset / itemWidth : 1);
+      if (__DEV__) {
+        console.log('[CAROUSEL] Scroll end page:', page, 'offset:', currentOffset);
+      }
 
-    // Left threshold: user scrolled 30% into previous week
-    if (currentOffset < threshold) {
-      if (__DEV__) {
-        console.log('[CAROUSEL] Left threshold reached - instant shift');
+      if (page === 0) {
+        shiftLeft();
+      } else if (page === 2) {
+        shiftRight();
       }
-      shiftLeft();
-    }
-    // Right threshold: user scrolled 30% into next week
-    else if (currentOffset > itemWidth * 2 - threshold) {
-      if (__DEV__) {
-        console.log('[CAROUSEL] Right threshold reached - instant shift');
-      }
-      shiftRight();
-    }
-  }, [contentWidth, shiftLeft, shiftRight]);
+    },
+    [contentWidth, shiftLeft, shiftRight]
+  );
 
   
   // Simplified viewable items handler - just for callbacks
@@ -500,7 +494,8 @@ const CalendarStrip = ({
             pagingEnabled={scrollerPaging}
             showsHorizontalScrollIndicator={false}
             getItemLayout={getItemLayout}
-            onScroll={onScroll}
+            onMomentumScrollEnd={onScrollEnd}
+            onScrollEndDrag={onScrollEnd}
             viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
             initialScrollIndex={CENTER_INDEX}
           />
