@@ -8,7 +8,6 @@ class CalendarController {
       numDaysInWeek: options.numDaysInWeek || 7,
       minDate: options.minDate ? dayjs(options.minDate) : undefined,
       maxDate: options.maxDate ? dayjs(options.maxDate) : undefined,
-      is2WeekView: options.is2WeekView || false,
     };
 
     this._listeners = new Set();
