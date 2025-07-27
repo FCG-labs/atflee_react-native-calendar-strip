@@ -35,10 +35,14 @@ describe('CalendarController', () => {
     
     it('should initialize _weeks as an array', () => {
       // CalendarController는 생성자에서 _initialize()를 호출하여 미리 주변 주를 준비함
-      // 따라서 _weeks는 비어있지 않고 초기 주들이 들어있음
+      // 기본 weekBuffer 값은 3으로, 총 3주가 준비되어야 함
       expect(Array.isArray(controller._weeks)).toBe(true);
-      // 일반적으로 3주(이전, 현재, 다음) 정도가 미리 준비됨
-      expect(controller._weeks.length).toBeGreaterThan(0);
+      expect(controller._weeks.length).toBe(3);
+    });
+
+    it('should respect custom weekBuffer size', () => {
+      const customController = new CalendarController({ weekBuffer: 5 });
+      expect(customController.getWeeks().length).toBe(5);
     });
   });
   
@@ -134,6 +138,16 @@ describe('CalendarController', () => {
       
       const selectedDate = controller.getSelectedDate();
       expect(dayjs(selectedDate).format('YYYY-MM-DD')).toBe('2025-01-01');
+    });
+  });
+
+  describe('jumpToDate', () => {
+    it('should prepare weeks using weekBuffer', () => {
+      const custom = new CalendarController({ weekBuffer: 5 });
+      const target = dayjs().add(2, 'month').toDate();
+      custom.jumpToDate(target);
+      expect(custom.getWeeks().length).toBe(5);
+      expect(custom.getSelectedDate().isSame(dayjs(target), 'day')).toBe(true);
     });
   });
   

@@ -5,8 +5,12 @@ import CalendarStrip from '../src/components/CalendarStrip';
 
 describe('CalendarStrip functional API', () => {
   test('renders buffered weeks of seven days by default', () => {
-    const { getAllByA11yRole } = render(<CalendarStrip showMonth={false} />);
+    const ref = React.createRef();
+    const { getAllByA11yRole } = render(
+      <CalendarStrip showMonth={false} ref={ref} />
+    );
     expect(getAllByA11yRole('button')).toHaveLength(49);
+    expect(ref.current.getWeeks()).toHaveLength(7);
   });
 
   test('respects numDaysInWeek prop', () => {
@@ -17,10 +21,12 @@ describe('CalendarStrip functional API', () => {
   });
 
   test('renders a single week when not scrollable', () => {
+    const ref = React.createRef();
     const { getAllByA11yRole } = render(
-      <CalendarStrip showMonth={false} scrollable={false} />
+      <CalendarStrip showMonth={false} scrollable={false} ref={ref} />
     );
     expect(getAllByA11yRole('button')).toHaveLength(7);
+    expect(ref.current.getWeeks()).toHaveLength(1);
   });
 
   test('exposes imperative methods via ref', () => {
@@ -95,5 +101,21 @@ describe('CalendarStrip functional API', () => {
 
     expect(pairs2).toBe(pairs1);
     expect(pairs2[0].onViewableItemsChanged).toBe(secondCb);
+  });
+
+  test('updating weekBuffer re-creates weeks array', () => {
+    const ref = React.createRef();
+    const { rerender } = render(
+      <CalendarStrip showMonth={false} weekBuffer={1} ref={ref} />
+    );
+
+    const weeksBefore = ref.current.getWeeks();
+    expect(weeksBefore).toHaveLength(3);
+
+    rerender(<CalendarStrip showMonth={false} weekBuffer={2} ref={ref} />);
+
+    const weeksAfter = ref.current.getWeeks();
+    expect(weeksAfter).toHaveLength(5);
+    expect(weeksAfter).not.toBe(weeksBefore);
   });
 });
