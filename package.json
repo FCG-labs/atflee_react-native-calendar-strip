@@ -27,8 +27,7 @@
   "dependencies": {
     "dayjs": "^1.11.9",
     "node-git-hooks": "^1.0.1",
-    "prop-types": "^15.6.0",
-    "react-native-pager-view": "^6.8.1"
+    "prop-types": "^15.6.0"
   },
   "peerDependencies": {
     "react": "*",
