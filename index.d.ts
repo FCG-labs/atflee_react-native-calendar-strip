@@ -148,6 +148,13 @@ export interface CalendarStripProps {
    * Whether to use paged scrolling
    */
   scrollerPaging?: boolean;
+
+  /**
+   * Number of weeks kept in memory when scrollable.
+   * Visible week plus this many weeks before and after will be rendered.
+   * @default 3
+   */
+  weekBuffer?: number;
   
   // Header configuration
   /**
@@ -401,6 +408,7 @@ export class CalendarController {
     initialDate?: Date;
     useIsoWeekday?: boolean;
     numDaysInWeek?: number;
+    weekBuffer?: number;
     minDate?: Date;
     maxDate?: Date;
   });

@@ -46,6 +46,7 @@ const CalendarStrip = ({
   numDaysInWeek = 7,
   scrollable,
   scrollerPaging,
+  weekBuffer = 3,
   
   // Header configuration
   showMonth,
@@ -91,9 +92,9 @@ const CalendarStrip = ({
   // Reference
   calendarRef
 }) => {
-  // Carousel constants - 3 items: [prev, current, next]
-  const WINDOW_SIZE = 3;
-  const CENTER_INDEX = 1;
+  // Carousel constants - dynamic window based on weekBuffer
+  const WINDOW_SIZE = weekBuffer * 2 + 1;
+  const CENTER_INDEX = weekBuffer;
 
   // FlatList reference
   const flatListRef = useRef(null);
@@ -141,8 +142,8 @@ const CalendarStrip = ({
     
     const weeks = [];
     
-    // Generate 3 weeks: 1 before, current, 1 after
-    for (let i = -1; i <= 1; i++) {
+    // Generate window of weeks around the active date
+    for (let i = -weekBuffer; i <= weekBuffer; i++) {
       const start = weekStart.add(i * numDaysInWeek, 'day');
       const week = generateWeek(start);
       logger.debug(`[INIT] Week ${i + 1}:`, dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
@@ -319,7 +320,7 @@ const CalendarStrip = ({
 
       if (page === 0) {
         shiftLeft();
-      } else if (page === 2) {
+      } else if (page === WINDOW_SIZE - 1) {
         shiftRight();
       }
     },
@@ -596,6 +597,7 @@ CalendarStrip.propTypes = {
   numDaysInWeek: PropTypes.number,
   scrollable: PropTypes.bool,
   scrollerPaging: PropTypes.bool,
+  weekBuffer: PropTypes.number,
 
   // Header configuration
   showMonth: PropTypes.bool,
@@ -666,6 +668,7 @@ CalendarStrip.defaultProps = {
   numDaysInWeek: 7,
   scrollable: true,
   scrollerPaging: true,
+  weekBuffer: 3,
 
   // Header configuration defaults
   showMonth: true,

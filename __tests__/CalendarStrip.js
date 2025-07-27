@@ -4,9 +4,9 @@ import { FlatList } from 'react-native';
 import CalendarStrip from '../src/components/CalendarStrip';
 
 describe('CalendarStrip functional API', () => {
-  test('renders three weeks of seven days by default', () => {
+  test('renders buffered weeks of seven days by default', () => {
     const { getAllByA11yRole } = render(<CalendarStrip showMonth={false} />);
-    expect(getAllByA11yRole('button')).toHaveLength(21);
+    expect(getAllByA11yRole('button')).toHaveLength(49);
   });
 
   test('respects numDaysInWeek prop', () => {

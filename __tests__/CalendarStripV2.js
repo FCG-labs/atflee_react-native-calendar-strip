@@ -124,7 +124,7 @@ describe('CalendarStrip Component', () => {
 
     const flatList = UNSAFE_getByType(FlatList);
     const cb = flatList.props.viewabilityConfigCallbackPairs[0].onViewableItemsChanged;
-    cb({ viewableItems: [{ index: 1 }] });
+    cb({ viewableItems: [{ index: 3 }] });
 
     const middleDate = dayjs(startDate).startOf('week').add(3, 'day');
     expect(updateMock).toHaveBeenCalledWith(middleDate.format('MM'), middleDate.format('YYYY'));
