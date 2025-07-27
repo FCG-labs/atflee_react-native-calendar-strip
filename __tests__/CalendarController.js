@@ -171,8 +171,34 @@ describe('CalendarController', () => {
       const initialIndex = controller.getCurrentWeekIndex();
       controller.goToNextWeek();
       const newIndex = controller.getCurrentWeekIndex();
-      
+
       expect(newIndex).toBe(initialIndex + 1);
+    });
+
+    it('should stop at maxDate when navigating forward', () => {
+      controller = new CalendarController({
+        initialDate: new Date(2025, 0, 7),
+        maxDate: new Date(2025, 0, 10)
+      });
+
+      const initialIndex = controller.getCurrentWeekIndex();
+      controller.goToNextWeek();
+      const newIndex = controller.getCurrentWeekIndex();
+
+      expect(newIndex).toBe(initialIndex);
+    });
+
+    it('should stop at minDate when navigating backward', () => {
+      controller = new CalendarController({
+        initialDate: new Date(2025, 0, 2),
+        minDate: new Date(2025, 0, 1)
+      });
+
+      const initialIndex = controller.getCurrentWeekIndex();
+      controller.goToPreviousWeek();
+      const newIndex = controller.getCurrentWeekIndex();
+
+      expect(newIndex).toBe(initialIndex);
     });
   });
 });
