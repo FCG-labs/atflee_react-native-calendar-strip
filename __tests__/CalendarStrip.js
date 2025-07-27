@@ -5,8 +5,12 @@ import CalendarStrip from '../src/components/CalendarStrip';
 
 describe('CalendarStrip functional API', () => {
   test('renders buffered weeks of seven days by default', () => {
-    const { getAllByA11yRole } = render(<CalendarStrip showMonth={false} />);
+    const ref = React.createRef();
+    const { getAllByA11yRole } = render(
+      <CalendarStrip showMonth={false} ref={ref} />
+    );
     expect(getAllByA11yRole('button')).toHaveLength(49);
+    expect(ref.current.getWeeks()).toHaveLength(7);
   });
 
   test('respects numDaysInWeek prop', () => {
@@ -17,10 +21,12 @@ describe('CalendarStrip functional API', () => {
   });
 
   test('renders a single week when not scrollable', () => {
+    const ref = React.createRef();
     const { getAllByA11yRole } = render(
-      <CalendarStrip showMonth={false} scrollable={false} />
+      <CalendarStrip showMonth={false} scrollable={false} ref={ref} />
     );
     expect(getAllByA11yRole('button')).toHaveLength(7);
+    expect(ref.current.getWeeks()).toHaveLength(1);
   });
 
   test('exposes imperative methods via ref', () => {
