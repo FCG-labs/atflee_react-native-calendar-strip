@@ -497,9 +497,15 @@ const CalendarStrip = ({
     itemVisiblePercentThreshold: 50
   }), []);
 
-  const viewabilityConfigCallbackPairs = useMemo(() => ([
+  const viewabilityConfigCallbackPairs = useRef([
     { viewabilityConfig, onViewableItemsChanged }
-  ]), [viewabilityConfig, onViewableItemsChanged]);
+  ]);
+  
+  useEffect(() => {
+    viewabilityConfigCallbackPairs.current = [
+      { viewabilityConfig, onViewableItemsChanged }
+    ];
+  }, [onViewableItemsChanged]);
 
   return (
     <View style={[styles.container, style]} onLayout={onLayout}>
