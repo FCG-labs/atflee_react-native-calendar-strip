@@ -2,25 +2,29 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  FlatList,
   Dimensions,
   Platform,
+  UIManager
 } from 'react-native';
-import PropTypes from 'prop-types';
+import PagerView from 'react-native-pager-view';
 import dayjs from 'dayjs';
+import isoWeek from 'dayjs/plugin/isoWeek';
+
+// Initialize dayjs plugins
+dayjs.extend(isoWeek);
 
 // Components
 import CalendarHeader from '../CalendarHeader';
-
-// Controller
-import CalendarController from '../controllers/CalendarController';
 import CalendarDateItem from './CalendarDateItem';
 
-// No longer using LayoutAnimation for smoother scroll synchronization
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 /**
- * CalendarStrip Component
- * A high-performance calendar strip with infinite bi-directional scrolling
+ * CalendarStrip Component - Carousel Pattern
+ * Fixed 5-week window with center-focused infinite scrolling
  */
 const CalendarStrip = ({
   // Calendar configuration
@@ -29,7 +33,7 @@ const CalendarStrip = ({
   minDate,
   maxDate,
   useIsoWeekday,
-  numDaysInWeek,
+  numDaysInWeek = 7,
   scrollable,
   scrollerPaging,
   
@@ -76,203 +80,165 @@ const CalendarStrip = ({
   // Reference
   calendarRef
 }) => {
-  // Initialize calendar controller
-  const [controller, setController] = useState(null);
-  useEffect(() => {
-    if (!controller) {
-      const newController = new CalendarController({
-        initialDate: startingDate || selectedDate,
-        minDate,
-        maxDate,
-        useIsoWeekday: useIsoWeekday !== undefined ? useIsoWeekday : false,
-        numDaysInWeek: numDaysInWeek || 7
+  // Carousel constants - 3 items: [prev, current, next]
+  const WINDOW_SIZE = 3;
+  const CENTER_INDEX = 1;
+
+  // PagerView reference
+  const pagerRef = useRef(null);
+
+  // Week generation utility
+  const generateWeek = useCallback((startDate) => {
+    const start = dayjs(startDate);
+    const today = dayjs();
+    const days = [];
+    
+    for (let i = 0; i < numDaysInWeek; i++) {
+      const date = start.add(i, 'day');
+      days.push({
+        date: date,
+        dateString: date.format('YYYY-MM-DD'),
+        dayOfWeek: date.day(),
+        dayOfMonth: date.date(),
+        month: date.month(),
+        year: date.year(),
+        isToday: date.isSame(today, 'day'),
+        isCurrentMonth: date.month() === today.month()
       });
-      
-      newController.addListener(onControllerUpdate);
-      setController(newController);
-      
-      // Forward ref to parent
-      if (calendarRef) {
-        calendarRef.current = newController;
-      }
     }
     
-    return () => {
-      if (controller) {
-        controller.removeListener(onControllerUpdate);
-      }
+    return {
+      startDate: start.toDate(),
+      endDate: start.add(numDaysInWeek - 1, 'day').toDate(),
+      days
     };
-  }, []);
+  }, [numDaysInWeek]);
 
-  // FlatList reference
-  const flatListRef = useRef(null);
-  
-  // State
-  const [weeks, setWeeks] = useState([]);
-  const [weekIndex, setWeekIndex] = useState(0);
-  const [prevWeeksLength, setPrevWeeksLength] = useState(0);
-  const [isInitialRender, setIsInitialRender] = useState(true);
+  const getWeekStart = useCallback((date) => {
+    const d = dayjs(date);
+    return useIsoWeekday ? d.startOf('isoWeek') : d.startOf('week');
+  }, [useIsoWeekday]);
+
+  // Initialize carousel window
+  const initCarousel = useCallback(() => {
+    console.log('[INIT] Creating carousel window');
+    const currentDate = selectedDate || startingDate || new Date();
+    console.log('[INIT] Current date:', dayjs(currentDate).format('YYYY-MM-DD'));
+    
+    const weekStart = getWeekStart(currentDate);
+    console.log('[INIT] Week start:', weekStart.format('YYYY-MM-DD'));
+    
+    const weeks = [];
+    
+    // Generate 3 weeks: 1 before, current, 1 after
+    for (let i = -1; i <= 1; i++) {
+      const start = weekStart.add(i * numDaysInWeek, 'day');
+      const week = generateWeek(start);
+      console.log(`[INIT] Week ${i + 1}:`, dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
+      weeks.push(week);
+    }
+    
+    console.log('[INIT] Created', weeks.length, 'weeks');
+    return weeks;
+  }, [selectedDate, startingDate, getWeekStart, generateWeek, numDaysInWeek]);
+
+  // State - Fixed carousel window
+  const [weeks, setWeeks] = useState(() => {
+    console.log('[STATE] Initializing weeks state');
+    return initCarousel();
+  });
+  const [activeDate, setActiveDate] = useState(() => {
+    const date = selectedDate || startingDate || new Date();
+    console.log('[STATE] Initial active date:', dayjs(date).format('YYYY-MM-DD'));
+    return date;
+  });
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
-  const [activeDate, setActiveDate] = useState(
-    controller ? controller.getSelectedDate() : null
-  );
-  
-  // Handle external updates to selectedDate
-  useEffect(() => {
-    if (selectedDate && !dayjs(selectedDate).isSame(dayjs(activeDate), 'day')) {
-      controller.jumpToDate(selectedDate);
-      setActiveDate(controller.getSelectedDate());
-    }
-  }, [selectedDate, activeDate]);
-  
-  // Listen to controller updates
-  useEffect(() => {
-    if (!controller) return;
-    
-    // 초기 상태 설정
-    setWeekIndex(controller.getCurrentWeekIndex());
-    setWeeks(controller.getWeeks());
-    setActiveDate(controller.getSelectedDate());
-  }, [controller]);
-  
-  // Expose methods via ref
-  React.useImperativeHandle(calendarRef, () => ({
-    scrollToDate: (date) => controller.scrollToDate(date),
-    getSelectedDate: () => controller.getSelectedDate(),
-    goToNextWeek: () => controller.goToNextWeek(),
-    goToPreviousWeek: () => controller.goToPreviousWeek()
-  }));
-  
-  // Controller update handler
-  const onControllerUpdate = useCallback(state => {
-    // 이전 주차 길이 저장
-    setPrevWeeksLength(weeks.length);
-    setWeeks(state.weeks || []);
-    setWeekIndex(state.currentWeekIndex);
-    setActiveDate(dayjs(state.selectedDate));
-    
-    // 스크롤 위치 조정
-    updateScrollPosition(state.weeks, state.currentWeekIndex, weeks.length);
-  }, [weeks.length]);
-  
-  // 스크롤 위치 업데이트 함수
-  const updateScrollPosition = useCallback((newWeeks, newIndex, oldWeeksLength) => {
-    if (!flatListRef.current || !newWeeks || newWeeks.length === 0) return;
-    
-    // 처음 렌더링 시에는 애니메이션 없이 스크롤
-    if (isInitialRender) {
-      flatListRef.current.scrollToIndex({
-        animated: false,
-        index: newIndex
-      });
-      setIsInitialRender(false);
-      return;
-    }
-    
-    // 주차가 추가된 경우
-    if (newWeeks.length > oldWeeksLength) {
-      // 앞쪽에 주차가 추가된 경우 (currentWeekIndex가 증가했다면)
-      const weekDiff = newWeeks.length - oldWeeksLength;
-      
-      if (newIndex >= weekDiff) {
-        // 스크롤 위치 유지를 위해 애니메이션 없이 이동
-        flatListRef.current.scrollToIndex({
-          animated: false,
-          index: newIndex
-        });
-      } else {
-        // 일반적인 경우
-        flatListRef.current.scrollToIndex({
-          animated: false,
-          index: newIndex
-        });
-      }
-    } else {
-      // 주차 개수에 변화가 없는 경우
-      flatListRef.current.scrollToIndex({
-        animated: false,
-        index: newIndex
-      });
-    }
-  }, [isInitialRender]);
-  
-  useEffect(() => {
-    if (flatListRef.current && weekIndex !== undefined && weeks.length > 0) {
-      updateScrollPosition(weeks, weekIndex, prevWeeksLength);
-    }
-  }, [weekIndex, weeks, prevWeeksLength, updateScrollPosition]);
-  
-  // Handle layout changes
-  const onLayout = useCallback(event => {
-    const { width } = event.nativeEvent.layout;
-    setViewWidth(width);
-  }, []);
-  
-  // Handle date selection
-  const handleDateSelection = useCallback(date => {
-    // Check if date is within min/max range
-    const dateObj = dayjs(date);
-    if (minDate && dateObj.isBefore(dayjs(minDate), 'day')) {
-      return;
-    }
-    if (maxDate && dateObj.isAfter(dayjs(maxDate), 'day')) {
-      return;
-    }
+  const [leftWidth, setLeftWidth] = useState(0);
 
-    controller.selectDate(date);
-    setActiveDate(controller.getSelectedDate());
+  // Handle selectedDate changes
+  useEffect(() => {
+    console.log('[EFFECT] selectedDate changed:', selectedDate ? dayjs(selectedDate).format('YYYY-MM-DD') : 'null');
+    console.log('[EFFECT] activeDate:', dayjs(activeDate).format('YYYY-MM-DD'));
     
-    if (onDateSelected) {
-      onDateSelected(controller.getSelectedDate());
-    }
-  }, [onDateSelected, minDate, maxDate]);
-  
-  // Handle week changed event
-  const handleWeekChanged = useCallback((startDate, endDate) => {
-    // Update controller
-    if (controller) {
-      controller.updateVisibleDates(startDate, endDate);
-    }
-    
-    if (onWeekChanged) {
-      onWeekChanged(startDate, endDate);
-    }
-    
-    if (updateMonthYear) {
-      // Use the middle date of the week for the header
-      const middleDate = dayjs(startDate)
-        .add(Math.floor(numDaysInWeek / 2), 'day');
-      updateMonthYear(middleDate);
-    }
-  }, [controller, onWeekChanged, updateMonthYear, numDaysInWeek]);
-  
-  // Handle scroll events
-  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
-      const firstVisibleItem = viewableItems[0];
-      const visibleWeek = firstVisibleItem.item;
+    if (selectedDate && !dayjs(selectedDate).isSame(dayjs(activeDate), 'day')) {
+      console.log('[EFFECT] Setting new active date');
+      setActiveDate(selectedDate);
       
-      if (visibleWeek) {
-        handleWeekChanged(
-          visibleWeek.startDate,
-          visibleWeek.endDate
-        );
+      // Check if selectedDate is in current window
+      const targetWeekStart = getWeekStart(selectedDate);
+      console.log('[EFFECT] Target week start:', targetWeekStart.format('YYYY-MM-DD'));
+      
+      const isInWindow = weeks.some(week => {
+        const weekStart = getWeekStart(week.startDate);
+        const match = weekStart.isSame(targetWeekStart, 'day');
+        console.log('[EFFECT] Checking week:', weekStart.format('YYYY-MM-DD'), 'matches:', match);
+        return match;
+      });
+      
+      console.log('[EFFECT] Is in current window:', isInWindow);
+      
+      if (!isInWindow) {
+        console.log('[EFFECT] Rebuilding carousel around selected date');
+        const newWeeks = initCarousel();
+        setWeeks(newWeeks);
       }
+      
+      // Always scroll to center
+      console.log('[EFFECT] Scrolling to center index:', CENTER_INDEX);
+      setTimeout(() => {
+        if (pagerRef.current) {
+          pagerRef.current.setPage(CENTER_INDEX);
+        }
+      }, 100);
     }
-  }, [handleWeekChanged]);
+  }, [selectedDate, activeDate, weeks, getWeekStart, initCarousel]);
+
+  // True Carousel: Real-time scroll threshold detection
+  const scrollOffsetRef = useRef(0);
+  const isShiftingRef = useRef(false);
   
-  const viewabilityConfig = {
-    itemVisiblePercentThreshold: 50
-  };
+  // PagerView page selection handler
+  const onPageSelected = useCallback((event) => {
+    const position = event.nativeEvent.position;
+    console.log('[PAGER] Page selected:', position);
+    
+    if (isShiftingRef.current) {
+      // Reset flag when we return to center
+      if (position === CENTER_INDEX) {
+        isShiftingRef.current = false;
+      }
+      return;
+    }
+    
+    if (position < CENTER_INDEX) {
+      console.log('[PAGER] Swiped left - add previous week');
+      isShiftingRef.current = true;
+      setWeeks(currentWeeks => {
+        const firstWeek = currentWeeks[0];
+        const prevWeekStart = getWeekStart(firstWeek.startDate).subtract(numDaysInWeek, 'day');
+        const newWeek = generateWeek(prevWeekStart);
+        return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
+      });
+      pagerRef.current?.setPageWithoutAnimation(CENTER_INDEX);
+    } else if (position > CENTER_INDEX) {
+      console.log('[PAGER] Swiped right - add next week');
+      isShiftingRef.current = true;
+      setWeeks(currentWeeks => {
+        const lastWeek = currentWeeks[currentWeeks.length - 1];
+        const nextWeekStart = getWeekStart(lastWeek.startDate).add(numDaysInWeek, 'day');
+        const newWeek = generateWeek(nextWeekStart);
+        return [...currentWeeks.slice(1), newWeek];
+      });
+      pagerRef.current?.setPageWithoutAnimation(CENTER_INDEX);
+    }
+  }, [generateWeek, getWeekStart, numDaysInWeek, WINDOW_SIZE, CENTER_INDEX]);
   
-  const viewabilityConfigCallbackPairs = useRef([
-    { viewabilityConfig, onViewableItemsChanged }
-  ]);
-  
+  const contentWidth = Math.max(viewWidth - leftWidth, 0);
+
   // Render week
   const renderWeek = useCallback(({ item: week }) => {
     return (
-      <View style={[styles.week, { width: viewWidth }]}>
+      <View style={[styles.week, { width: contentWidth }]}>
         {week.days.map(day => (
           <CalendarDateItem
             key={day.dateString}
@@ -282,129 +248,200 @@ const CalendarStrip = ({
               ? day.date.format('ddd').toUpperCase()
               : day.date.format('ddd')
             }
-            month={day.month}
-            isActive={dayjs(activeDate).isSame(day.date, 'day')}
             isToday={day.isToday}
+            isSelected={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
             isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
-            showDayName={showDayName}
-            showDayNumber={showDayNumber}
-            onDateSelected={handleDateSelection}
-            dayTextStyle={dateNameStyle}
+            isCurrentMonth={day.isCurrentMonth}
+            onDateSelected={() => handleDateSelection(day.date)}
+            markedDates={markedDates}
+            markedDatesStyle={markedDatesStyle}
+            markerComponent={markerComponent}
+            dayComponent={dayComponent}
+            dateNameStyle={dateNameStyle}
             dateNumberStyle={dateNumberStyle}
             highlightDateNameStyle={highlightDateNameStyle}
             highlightDateNumberStyle={highlightDateNumberStyle}
             dayContainerStyle={dayContainerStyle}
-            highlightColor={highlightColor}
             calendarColor={calendarColor}
+            highlightColor={highlightColor}
             disabledDateOpacity={disabledDateOpacity}
-            allowDayTextScaling={allowDayTextScaling}
-            dayComponent={dayComponent}
-            markedDates={markedDates}
-            markedDatesStyle={markedDatesStyle}
-            markerComponent={markerComponent}
-            activeDate={activeDate}
             styleWeekend={styleWeekend}
-            isDisabled={
-              (minDate && day.date.isBefore(dayjs(minDate), 'day')) ||
-              (maxDate && day.date.isAfter(dayjs(maxDate), 'day'))
-            }
+            showDayName={showDayName}
+            showDayNumber={showDayNumber}
+            allowDayTextScaling={allowDayTextScaling}
           />
         ))}
       </View>
     );
   }, [
-    viewWidth,
-    activeDate,
-    dateNameStyle,
-    dateNumberStyle,
-    highlightDateNameStyle,
-    highlightDateNumberStyle,
-    showDayName,
-    showDayNumber,
-    upperCaseDays,
-    dayContainerStyle,
-    disabledDateOpacity,
-    allowDayTextScaling,
-    dayComponent,
-    markedDates,
-    markedDatesStyle,
-    markerComponent,
-    handleDateSelection,
-    calendarColor,
-    highlightColor,
-    styleWeekend,
-    minDate,
-    maxDate
+    contentWidth, upperCaseDays, activeDate, handleDateSelection,
+    markedDates, markedDatesStyle, markerComponent, dayComponent,
+    dateNameStyle, dateNumberStyle, highlightDateNameStyle,
+    highlightDateNumberStyle, dayContainerStyle, calendarColor,
+    highlightColor, disabledDateOpacity, styleWeekend,
+    showDayName, showDayNumber, allowDayTextScaling
   ]);
-  
-  // Key extractor for FlatList
-  const keyExtractor = useCallback(week => week.id, []);
-  
-  // Get item layout for FlatList optimization
-  const getItemLayout = useCallback((data, index) => ({
-    length: viewWidth,
-    offset: viewWidth * index,
-    index,
-  }), [viewWidth]);
-  
+
+  // Date selection handler
+  const handleDateSelection = useCallback(date => {
+    console.log('[DATE] Date selected:', dayjs(date).format('YYYY-MM-DD'));
+    
+    const dateObj = dayjs(date);
+    if (minDate && dateObj.isBefore(dayjs(minDate), 'day')) {
+      console.log('[DATE] Date before minDate, ignoring');
+      return;
+    }
+    if (maxDate && dateObj.isAfter(dayjs(maxDate), 'day')) {
+      console.log('[DATE] Date after maxDate, ignoring');
+      return;
+    }
+
+    console.log('[DATE] Setting active date to:', dayjs(date).format('YYYY-MM-DD'));
+    setActiveDate(date);
+    
+    if (onDateSelected) {
+      console.log('[DATE] Calling onDateSelected callback');
+      onDateSelected(date);
+    }
+  }, [onDateSelected, minDate, maxDate]);
+
+  // Layout handlers
+  const onLayout = useCallback(event => {
+    const { width } = event.nativeEvent.layout;
+    setViewWidth(width);
+  }, []);
+
+  const onLeftLayout = useCallback(e => {
+    setLeftWidth(e.nativeEvent.layout.width);
+  }, []);
+
+  // Imperative methods
+  React.useImperativeHandle(calendarRef, () => ({
+    scrollToDate: (date) => {
+      setActiveDate(date);
+      
+      // Rebuild carousel around new date
+      const newWeeks = initCarousel();
+      setWeeks(newWeeks);
+      
+      setTimeout(() => {
+        if (pagerRef.current) {
+          pagerRef.current.setPage(CENTER_INDEX);
+        }
+      }, 100);
+    },
+    getSelectedDate: () => activeDate,
+    goToNextWeek: () => {
+      const centerWeek = weeks[CENTER_INDEX];
+      if (centerWeek) {
+        const nextWeekStart = getWeekStart(centerWeek.startDate).add(numDaysInWeek, 'day');
+        setActiveDate(nextWeekStart.toDate());
+      }
+    },
+    goToPreviousWeek: () => {
+      const centerWeek = weeks[CENTER_INDEX];
+      if (centerWeek) {
+        const prevWeekStart = getWeekStart(centerWeek.startDate).subtract(numDaysInWeek, 'day');
+        setActiveDate(prevWeekStart.toDate());
+      }
+    }
+  }));
+
   return (
     <View style={[styles.container, style]} onLayout={onLayout}>
       {showMonth && (
         <CalendarHeader
           calendarHeaderFormat={calendarHeaderFormat}
-          calendarHeaderPosition={calendarHeaderPosition}
           calendarHeaderStyle={calendarHeaderStyle}
-          dateForHeader={activeDate}
-          updateMonthYear={updateMonthYear}
+          testID="calendar_header"
+          activeDate={activeDate}
           onHeaderSelected={onHeaderSelected}
-          shouldAllowFontScaling={allowDayTextScaling}
         />
       )}
       
       <View style={styles.calendarContainer}>
-        {leftSelector}
+        <View onLayout={onLeftLayout}>{leftSelector}</View>
         
-        <FlatList
-          ref={flatListRef}
-          data={weeks}
-          renderItem={renderWeek}
-          keyExtractor={keyExtractor}
-          horizontal
-          pagingEnabled={scrollerPaging}
-          initialScrollIndex={weekIndex}
-          getItemLayout={getItemLayout}
-          showsHorizontalScrollIndicator={false}
-          scrollEnabled={scrollable}
-          viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
-          initialNumToRender={3}
-          maxToRenderPerBatch={3}
-          windowSize={5}
-          removeClippedSubviews={Platform.OS === 'android'}
-          // extraData를 추가하여 주차 데이터가 변경될 때 확실히 리렌더링되도록 함
-          extraData={{ weeksLength: weeks.length, weekIndex }}
-          onScrollToIndexFailed={info => {
-            // Handle scroll to index failures gracefully
-            const wait = new Promise(resolve => setTimeout(resolve, 500));
-            wait.then(() => {
-              if (flatListRef.current) {
-                const safeIndex = Math.min(weeks.length - 1, Math.max(0, info.index));
-                flatListRef.current.scrollToIndex({
-                  index: safeIndex,
-                  animated: false,
-                  viewPosition: 0.5 // 가운데 정렬
-                });
-              }
-            });
-          }}
-          contentContainerStyle={calendarColor ? { backgroundColor: calendarColor } : undefined}
-          style={styles.flatList}
-          maintainVisibleContentPosition={{
-            // 콘텐츠 위치 유지 옵션 (iOS만 지원)
-            minIndexForVisible: 0
-          }}
-        />
+        {scrollable ? (
+          <PagerView
+            ref={pagerRef}
+            style={{ width: contentWidth, flex: 1 }}
+            initialPage={CENTER_INDEX}
+            onPageSelected={onPageSelected}
+            scrollEnabled={scrollerPaging}
+          >
+            {weeks.map((week) => (
+              <View key={week.startDate.toISOString()} style={[styles.week, { width: contentWidth }]}> 
+                {week.days.map(day => (
+                  <CalendarDateItem
+                    key={day.dateString}
+                    date={day.date}
+                    dateNumber={day.dayOfMonth}
+                    dayName={upperCaseDays ? day.date.format('ddd').toUpperCase() : day.date.format('ddd')}
+                    isToday={day.isToday}
+                    isSelected={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
+                    isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
+                    isCurrentMonth={day.isCurrentMonth}
+                    onDateSelected={() => handleDateSelection(day.date)}
+                    markedDates={markedDates}
+                    markedDatesStyle={markedDatesStyle}
+                    markerComponent={markerComponent}
+                    dayComponent={dayComponent}
+                    dateNameStyle={dateNameStyle}
+                    dateNumberStyle={dateNumberStyle}
+                    highlightDateNameStyle={highlightDateNameStyle}
+                    highlightDateNumberStyle={highlightDateNumberStyle}
+                    dayContainerStyle={dayContainerStyle}
+                    calendarColor={calendarColor}
+                    highlightColor={highlightColor}
+                    disabledDateOpacity={disabledDateOpacity}
+                    styleWeekend={styleWeekend}
+                    showDayName={showDayName}
+                    showDayNumber={showDayNumber}
+                    allowDayTextScaling={allowDayTextScaling}
+                  />
+                ))}
+              </View>
+            ))}
+          </PagerView>
+        ) : (
+          <View style={[styles.week, { width: contentWidth }]}>
+            {weeks[CENTER_INDEX]?.days.map(day => (
+              <CalendarDateItem
+                key={day.dateString}
+                date={day.date}
+                dateNumber={day.dayOfMonth}
+                dayName={upperCaseDays
+                  ? day.date.format('ddd').toUpperCase()
+                  : day.date.format('ddd')
+                }
+                isToday={day.isToday}
+                isSelected={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
+                isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
+                isCurrentMonth={day.isCurrentMonth}
+                onDateSelected={() => handleDateSelection(day.date)}
+                markedDates={markedDates}
+                markedDatesStyle={markedDatesStyle}
+                markerComponent={markerComponent}
+                dayComponent={dayComponent}
+                dateNameStyle={dateNameStyle}
+                dateNumberStyle={dateNumberStyle}
+                highlightDateNameStyle={highlightDateNameStyle}
+                highlightDateNumberStyle={highlightDateNumberStyle}
+                dayContainerStyle={dayContainerStyle}
+                calendarColor={calendarColor}
+                highlightColor={highlightColor}
+                disabledDateOpacity={disabledDateOpacity}
+                styleWeekend={styleWeekend}
+                showDayName={showDayName}
+                showDayNumber={showDayNumber}
+                allowDayTextScaling={allowDayTextScaling}
+              />
+            ))}
+          </View>
+        )}
         
-        {rightSelector}
+        <View>{rightSelector}</View>
       </View>
     </View>
   );
@@ -418,83 +455,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  flatList: {
-    flexGrow: 1,
-  },
   week: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
   },
 });
-
-CalendarStrip.propTypes = {
-  // Calendar configuration
-  selectedDate: PropTypes.instanceOf(Date),
-  startingDate: PropTypes.instanceOf(Date),
-  minDate: PropTypes.instanceOf(Date),
-  maxDate: PropTypes.instanceOf(Date),
-  useIsoWeekday: PropTypes.bool,
-  numDaysInWeek: PropTypes.number,
-  scrollable: PropTypes.bool,
-  scrollerPaging: PropTypes.bool,
-  
-  // Header configuration
-  showMonth: PropTypes.bool,
-  calendarHeaderFormat: PropTypes.string,
-  calendarHeaderPosition: PropTypes.oneOf(['above', 'below']),
-  calendarHeaderStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  
-  // Styling
-  style: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  calendarColor: PropTypes.string,
-  highlightColor: PropTypes.string,
-  dateNameStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  dateNumberStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  highlightDateNameStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  highlightDateNumberStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  dayContainerStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  disabledDateOpacity: PropTypes.number,
-  styleWeekend: PropTypes.bool,
-  
-  // Display options
-  showDayName: PropTypes.bool,
-  showDayNumber: PropTypes.bool,
-  upperCaseDays: PropTypes.bool,
-  allowDayTextScaling: PropTypes.bool,
-  
-  // Events and callbacks
-  onDateSelected: PropTypes.func,
-  onWeekChanged: PropTypes.func,
-  onHeaderSelected: PropTypes.func,
-  updateMonthYear: PropTypes.func,
-  
-  // Custom components
-  dayComponent: PropTypes.func,
-  leftSelector: PropTypes.element,
-  rightSelector: PropTypes.element,
-  
-  // Markers
-  markedDates: PropTypes.array,
-  markedDatesStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  markerComponent: PropTypes.func,
-  
-  // Reference
-  calendarRef: PropTypes.object
-};
-
-CalendarStrip.defaultProps = {
-  useIsoWeekday: false,
-  numDaysInWeek: 7,
-  showMonth: true,
-  showDayName: true,
-  showDayNumber: true,
-  scrollable: true,
-  scrollerPaging: true,
-  upperCaseDays: true,
-  allowDayTextScaling: true,
-  disabledDateOpacity: 0.3,
-  calendarHeaderPosition: 'above'
-};
 
 export default CalendarStrip;

@@ -180,7 +180,8 @@ const styles = StyleSheet.create({
 });
 
 CalendarDateItem.propTypes = {
-  date: PropTypes.instanceOf(Date).isRequired,
+  // Accept JavaScript Date or dayjs object
+  date: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.object]).isRequired,
   dateNumber: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   dayName: PropTypes.string.isRequired,
   month: PropTypes.number.isRequired,
@@ -204,7 +205,7 @@ CalendarDateItem.propTypes = {
   markedDatesStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   markerComponent: PropTypes.func,
   dayContainerStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  activeDate: PropTypes.instanceOf(Date),
+  activeDate: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.object]),
   highlightColor: PropTypes.string,
   calendarColor: PropTypes.string,
   styleWeekend: PropTypes.bool,
