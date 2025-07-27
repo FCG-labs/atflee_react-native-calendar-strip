@@ -163,8 +163,17 @@ const CalendarStrip = ({
   useEffect(() => {
     const centerWeek = weeks[CENTER_INDEX];
 
-    if (centerWeek && onWeekChanged) {
-      onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
+    if (centerWeek) {
+      const weekKey = `${dayjs(centerWeek.startDate).format('YYYY-MM-DD')}_${dayjs(centerWeek.endDate).format('YYYY-MM-DD')}`;
+
+      // Invoke callback only if week actually changed and skip initial mount
+      if (currentWeekRef.current !== weekKey) {
+        if (!skipInitialRef.current && onWeekChanged) {
+          onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
+        }
+        currentWeekRef.current = weekKey;
+        skipInitialRef.current = false;
+      }
     }
 
     if (centerWeek && updateMonthYear) {
@@ -177,6 +186,7 @@ const CalendarStrip = ({
       updateMonthYear(month, year);
     }
   }, [weeks, onWeekChanged, updateMonthYear, numDaysInWeek]);
+  
   const [activeDate, setActiveDate] = useState(() => {
     const date = selectedDate || startingDate || new Date();
     logger.debug('[STATE] Initial active date:', dayjs(date).format('YYYY-MM-DD'));
