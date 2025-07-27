@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useCallback,
   useLayoutEffect,
+  useMemo,
 } from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -492,19 +493,13 @@ const CalendarStrip = ({
     index,
   }), [contentWidth]);
 
-  const viewabilityConfig = {
+  const viewabilityConfig = useMemo(() => ({
     itemVisiblePercentThreshold: 50
-  };
+  }), []);
 
-  const viewabilityConfigCallbackPairs = useRef([
+  const viewabilityConfigCallbackPairs = useMemo(() => ([
     { viewabilityConfig, onViewableItemsChanged }
-  ]);
-
-  useEffect(() => {
-    viewabilityConfigCallbackPairs.current = [
-      { viewabilityConfig, onViewableItemsChanged }
-    ];
-  }, [onViewableItemsChanged]);
+  ]), [viewabilityConfig, onViewableItemsChanged]);
 
   return (
     <View style={[styles.container, style]} onLayout={onLayout}>
@@ -533,7 +528,7 @@ const CalendarStrip = ({
             getItemLayout={getItemLayout}
             onMomentumScrollEnd={onScrollEnd}
             onScrollEndDrag={onScrollEnd}
-            viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
+            viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs}
             initialScrollIndex={CENTER_INDEX}
           />
         ) : (
