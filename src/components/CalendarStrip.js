@@ -223,7 +223,6 @@ const CalendarStrip = ({
   }, [selectedDate, activeDate, weeks, getWeekStart, initCarousel]);
 
   // True Carousel: Real-time scroll threshold detection
-  const scrollOffsetRef = useRef(0);
   const isShiftingRef = useRef(false);
   
   const onScroll = useCallback((event) => {
