@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import {
   View,
   StyleSheet,
@@ -226,65 +227,83 @@ const CalendarStrip = ({
   // True Carousel: Real-time scroll threshold detection
   const isShiftingRef = useRef(false);
   
+  const shiftLeft = useCallback(() => {
+    if (isShiftingRef.current) return false;
+    isShiftingRef.current = true;
+
+    let shifted = false;
+    setWeeks(currentWeeks => {
+      const firstWeek = currentWeeks[0];
+      const prevWeekStart = getWeekStart(firstWeek.startDate).subtract(numDaysInWeek, 'day');
+      const prevWeekEnd = dayjs(prevWeekStart).add(numDaysInWeek - 1, 'day');
+
+      if (minDate && prevWeekEnd.isBefore(dayjs(minDate), 'day')) {
+        return currentWeeks;
+      }
+
+      shifted = true;
+      const newWeek = generateWeek(prevWeekStart);
+      return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
+    });
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
+      isShiftingRef.current = false;
+    }, 0);
+
+    return shifted;
+  }, [generateWeek, getWeekStart, numDaysInWeek, minDate, WINDOW_SIZE]);
+
+  const shiftRight = useCallback(() => {
+    if (isShiftingRef.current) return false;
+    isShiftingRef.current = true;
+
+    let shifted = false;
+    setWeeks(currentWeeks => {
+      const lastWeek = currentWeeks[currentWeeks.length - 1];
+      const nextWeekStart = getWeekStart(lastWeek.startDate).add(numDaysInWeek, 'day');
+
+      if (maxDate && dayjs(nextWeekStart).isAfter(dayjs(maxDate), 'day')) {
+        return currentWeeks;
+      }
+
+      shifted = true;
+      const newWeek = generateWeek(nextWeekStart);
+      return [...currentWeeks.slice(1), newWeek];
+    });
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
+      isShiftingRef.current = false;
+    }, 0);
+
+    return shifted;
+  }, [generateWeek, getWeekStart, numDaysInWeek, maxDate, WINDOW_SIZE]);
+
   const onScroll = useCallback((event) => {
     const currentOffset = event.nativeEvent.contentOffset.x;
     const itemWidth = contentWidth;
     const threshold = itemWidth * 0.3; // 30% threshold for instant response
-    
-    // Prevent multiple rapid shifts
-    if (isShiftingRef.current) return;
-    
     if (__DEV__) {
       console.log('[CAROUSEL] Scroll offset:', currentOffset, 'Threshold:', threshold);
     }
-    
+
     // Left threshold: user scrolled 30% into previous week
     if (currentOffset < threshold) {
       if (__DEV__) {
         console.log('[CAROUSEL] Left threshold reached - instant shift');
       }
-      isShiftingRef.current = true;
-      
-      setWeeks(currentWeeks => {
-        const firstWeek = currentWeeks[0];
-        const prevWeekStart = getWeekStart(firstWeek.startDate).subtract(numDaysInWeek, 'day');
-        const newWeek = generateWeek(prevWeekStart);
-        if (__DEV__) {
-          console.log('[CAROUSEL] Adding previous week:', dayjs(newWeek.startDate).format('YYYY-MM-DD'));
-        }
-        return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
-      });
-      
-      // Instantly reset to center
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
-        isShiftingRef.current = false;
-      }, 0);
+      shiftLeft();
     }
-    // Right threshold: user scrolled 30% into next week  
+    // Right threshold: user scrolled 30% into next week
     else if (currentOffset > itemWidth * 2 - threshold) {
       if (__DEV__) {
         console.log('[CAROUSEL] Right threshold reached - instant shift');
       }
-      isShiftingRef.current = true;
-      
-      setWeeks(currentWeeks => {
-        const lastWeek = currentWeeks[currentWeeks.length - 1];
-        const nextWeekStart = getWeekStart(lastWeek.startDate).add(numDaysInWeek, 'day');
-        const newWeek = generateWeek(nextWeekStart);
-        if (__DEV__) {
-          console.log('[CAROUSEL] Adding next week:', dayjs(newWeek.startDate).format('YYYY-MM-DD'));
-        }
-        return [...currentWeeks.slice(1), newWeek];
-      });
-      
-      // Instantly reset to center
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
-        isShiftingRef.current = false;
-      }, 0);
+      shiftRight();
     }
-  }, [contentWidth, getWeekStart, generateWeek, numDaysInWeek, WINDOW_SIZE]);
+  }, [contentWidth, shiftLeft, shiftRight]);
+
   
   // Simplified viewable items handler - just for callbacks
   const onViewableItemsChanged = useCallback(({ viewableItems }) => {
@@ -537,5 +556,141 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+CalendarStrip.propTypes = {
+  // Calendar configuration
+  selectedDate: PropTypes.oneOfType([
+    PropTypes.instanceOf(Date),
+    PropTypes.object
+  ]),
+  startingDate: PropTypes.oneOfType([
+    PropTypes.instanceOf(Date),
+    PropTypes.object
+  ]),
+  minDate: PropTypes.oneOfType([
+    PropTypes.instanceOf(Date),
+    PropTypes.object
+  ]),
+  maxDate: PropTypes.oneOfType([
+    PropTypes.instanceOf(Date),
+    PropTypes.object
+  ]),
+  useIsoWeekday: PropTypes.bool,
+  numDaysInWeek: PropTypes.number,
+  scrollable: PropTypes.bool,
+  scrollerPaging: PropTypes.bool,
+
+  // Header configuration
+  showMonth: PropTypes.bool,
+  calendarHeaderFormat: PropTypes.string,
+  calendarHeaderPosition: PropTypes.oneOf(['top', 'bottom']),
+  calendarHeaderStyle: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array
+  ]),
+
+  // Styling
+  style: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  calendarColor: PropTypes.string,
+  highlightColor: PropTypes.string,
+  dateNameStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  dateNumberStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  highlightDateNameStyle: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array
+  ]),
+  highlightDateNumberStyle: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array
+  ]),
+  dayContainerStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  disabledDateOpacity: PropTypes.number,
+  styleWeekend: PropTypes.bool,
+
+  // Display options
+  showDayName: PropTypes.bool,
+  showDayNumber: PropTypes.bool,
+  upperCaseDays: PropTypes.bool,
+  allowDayTextScaling: PropTypes.bool,
+
+  // Events and callbacks
+  onDateSelected: PropTypes.func,
+  onWeekChanged: PropTypes.func,
+  onHeaderSelected: PropTypes.func,
+  updateMonthYear: PropTypes.func,
+
+  // Custom components
+  dayComponent: PropTypes.func,
+  leftSelector: PropTypes.node,
+  rightSelector: PropTypes.node,
+
+  // Markers
+  markedDates: PropTypes.array,
+  markedDatesStyle: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array
+  ]),
+  markerComponent: PropTypes.func,
+
+  // Reference
+  calendarRef: PropTypes.oneOfType([
+    PropTypes.func,
+    PropTypes.shape({ current: PropTypes.any })
+  ])
+};
+
+CalendarStrip.defaultProps = {
+  selectedDate: new Date(),
+  startingDate: new Date(),
+  minDate: undefined,
+  maxDate: undefined,
+  useIsoWeekday: false,
+  numDaysInWeek: 7,
+  scrollable: true,
+  scrollerPaging: true,
+
+  // Header configuration defaults
+  showMonth: true,
+  calendarHeaderFormat: 'MMMM YYYY',
+  calendarHeaderPosition: 'top',
+  calendarHeaderStyle: {},
+
+  // Styling defaults
+  style: {},
+  calendarColor: '#fff',
+  highlightColor: '#000',
+  dateNameStyle: {},
+  dateNumberStyle: {},
+  highlightDateNameStyle: {},
+  highlightDateNumberStyle: {},
+  dayContainerStyle: {},
+  disabledDateOpacity: 0.3,
+  styleWeekend: false,
+
+  // Display options defaults
+  showDayName: true,
+  showDayNumber: true,
+  upperCaseDays: false,
+  allowDayTextScaling: true,
+
+  // Events and callbacks
+  onDateSelected: undefined,
+  onWeekChanged: undefined,
+  onHeaderSelected: undefined,
+  updateMonthYear: undefined,
+
+  // Custom components
+  dayComponent: undefined,
+  leftSelector: undefined,
+  rightSelector: undefined,
+
+  // Markers
+  markedDates: [],
+  markedDatesStyle: {},
+  markerComponent: undefined,
+
+  // Reference
+  calendarRef: undefined
+};
 
 export default CalendarStrip;

@@ -8,7 +8,6 @@ class CalendarController {
       numDaysInWeek: options.numDaysInWeek || 7,
       minDate: options.minDate ? dayjs(options.minDate) : undefined,
       maxDate: options.maxDate ? dayjs(options.maxDate) : undefined,
-      is2WeekView: options.is2WeekView || false,
     };
 
     this._listeners = new Set();
@@ -93,17 +92,24 @@ class CalendarController {
   }
 
   goToNextWeek() {
-    this._currentWeekIndex += 1;
     const lastWeek = this._weeks[this._weeks.length - 1];
     const nextStart = this._getWeekStart(lastWeek.startDate).add(this._options.numDaysInWeek, 'day');
+    if (this._options.maxDate && nextStart.isAfter(this._options.maxDate, 'day')) {
+      return;
+    }
+    this._currentWeekIndex += 1;
     this._weeks.push(this._generateWeek(nextStart));
     this._notify();
   }
 
   goToPreviousWeek() {
-    this._currentWeekIndex -= 1;
     const firstWeek = this._weeks[0];
     const prevStart = this._getWeekStart(firstWeek.startDate).subtract(this._options.numDaysInWeek, 'day');
+    const prevEnd = prevStart.add(this._options.numDaysInWeek - 1, 'day');
+    if (this._options.minDate && prevEnd.isBefore(this._options.minDate, 'day')) {
+      return;
+    }
+    this._currentWeekIndex -= 1;
     this._weeks.unshift(this._generateWeek(prevStart));
     this._notify();
   }

@@ -1,46 +1,34 @@
-import React from "react";
-import { configure, shallow } from "enzyme";
-import Adapter from "enzyme-adapter-react-16";
-import dayjs from "../src/dayjs";
+import React from 'react';
+import { render } from '@testing-library/react-native';
+import CalendarStrip from '../src/components/CalendarStrip';
 
-import CalendarStrip from "../src/CalendarStrip";
-
-configure({ adapter: new Adapter() });
-
-describe("CalendarStrip getMaxSimultaneousDays", () => {
-  it("returns week buffer default when no range provided", () => {
-    const component = shallow(<CalendarStrip />);
-    const instance = component.instance();
-    expect(instance.getMaxSimultaneousDays()).toBe(21); // 3 weeks
+describe('CalendarStrip functional API', () => {
+  test('renders three weeks of seven days by default', () => {
+    const { getAllByA11yRole } = render(<CalendarStrip showMonth={false} />);
+    expect(getAllByA11yRole('button')).toHaveLength(21);
   });
 
-  it("returns diff when range is smaller", () => {
-    const min = dayjs("2025-01-01");
-    const max = dayjs("2025-01-10");
-    const component = shallow(<CalendarStrip minDate={min} maxDate={max} />);
-    const instance = component.instance();
-    expect(instance.getMaxSimultaneousDays()).toBe(10);
-  });
-
-  it("returns buffer when range is larger", () => {
-    const min = dayjs("2010-01-01");
-    const max = dayjs("2030-12-31");
-    const component = shallow(<CalendarStrip minDate={min} maxDate={max} />);
-    const instance = component.instance();
-    expect(instance.getMaxSimultaneousDays()).toBe(21);
-  });
-
-  it("respects custom weekBuffer", () => {
-    const component = shallow(<CalendarStrip weekBuffer={5} />);
-    const instance = component.instance();
-    expect(instance.getMaxSimultaneousDays()).toBe(35);
-  });
-
-  it("uses numDaysInWeek for multi-week views", () => {
-    const component = shallow(
-      <CalendarStrip numDaysInWeek={14} weekBuffer={2} />
+  test('respects numDaysInWeek prop', () => {
+    const { getAllByA11yRole } = render(
+      <CalendarStrip showMonth={false} numDaysInWeek={14} />
     );
-    const instance = component.instance();
-    expect(instance.getMaxSimultaneousDays()).toBe(28);
+    expect(getAllByA11yRole('button')).toHaveLength(42);
+  });
+
+  test('renders a single week when not scrollable', () => {
+    const { getAllByA11yRole } = render(
+      <CalendarStrip showMonth={false} scrollable={false} />
+    );
+    expect(getAllByA11yRole('button')).toHaveLength(7);
+  });
+
+  test('exposes imperative methods via ref', () => {
+    const ref = React.createRef();
+    render(<CalendarStrip showMonth={false} ref={ref} />);
+    expect(ref.current).toBeTruthy();
+    expect(typeof ref.current.goToNextWeek).toBe('function');
+    expect(typeof ref.current.goToPreviousWeek).toBe('function');
+    expect(typeof ref.current.getSelectedDate).toBe('function');
+    expect(typeof ref.current.scrollToDate).toBe('function');
   });
 });

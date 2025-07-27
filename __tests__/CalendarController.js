@@ -106,22 +106,6 @@ describe('CalendarController', () => {
       expect(week.days.length).toBe(5);
     });
     
-    it('should handle 2-week view with useIsoWeekday', () => {
-      const customController = new CalendarController({
-        useIsoWeekday: true,
-        is2WeekView: true
-      });
-      
-      // 임의의 날짜로 주 생성
-      const startDate = dayjs('2025-01-06'); 
-      const week = customController._generateWeek(startDate);
-      
-      // 결과가 유효한지 확인
-      expect(week).toBeDefined();
-      expect(week.days).toBeDefined();
-      expect(week.startDate).toBeDefined();
-      expect(week.endDate).toBeDefined();
-    });
   });
   
   describe('findWeekIndexByDate', () => {
@@ -171,8 +155,34 @@ describe('CalendarController', () => {
       const initialIndex = controller.getCurrentWeekIndex();
       controller.goToNextWeek();
       const newIndex = controller.getCurrentWeekIndex();
-      
+
       expect(newIndex).toBe(initialIndex + 1);
+    });
+
+    it('should stop at maxDate when navigating forward', () => {
+      controller = new CalendarController({
+        initialDate: new Date(2025, 0, 7),
+        maxDate: new Date(2025, 0, 10)
+      });
+
+      const initialIndex = controller.getCurrentWeekIndex();
+      controller.goToNextWeek();
+      const newIndex = controller.getCurrentWeekIndex();
+
+      expect(newIndex).toBe(initialIndex);
+    });
+
+    it('should stop at minDate when navigating backward', () => {
+      controller = new CalendarController({
+        initialDate: new Date(2025, 0, 2),
+        minDate: new Date(2025, 0, 1)
+      });
+
+      const initialIndex = controller.getCurrentWeekIndex();
+      controller.goToPreviousWeek();
+      const newIndex = controller.getCurrentWeekIndex();
+
+      expect(newIndex).toBe(initialIndex);
     });
   });
 });

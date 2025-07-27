@@ -13,9 +13,6 @@ WeekSelector.propTypes = {
   icon: PropTypes.any,
   size: PropTypes.number,
   children: PropTypes.node,
-  controlDate: PropTypes.any,
-  weekStartDate: PropTypes.any,
-  weekEndDate: PropTypes.any,
 };
 
 export default WeekSelector;
