@@ -300,36 +300,44 @@ const CalendarStrip = ({
   }, [weeks, onWeekChanged, updateMonthYear, numDaysInWeek, CENTER_INDEX]);
 
   // Imperative methods
-  React.useImperativeHandle(calendarRef, () => ({
-    scrollToDate: (date) => {
+  React.useImperativeHandle(calendarRef, () => {
+    const handleScrollToDate = (date) => {
       setActiveDate(date);
-      
+
       // Rebuild carousel around new date
       const newWeeks = initCarousel();
       setWeeks(newWeeks);
-      
+
       setTimeout(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToIndex({ index: CENTER_INDEX, animated: true });
         }
       }, 100);
-    },
-    getSelectedDate: () => activeDate,
-    goToNextWeek: () => {
-      const centerWeek = weeks[CENTER_INDEX];
-      if (centerWeek) {
-        const nextWeekStart = getWeekStart(centerWeek.startDate).add(numDaysInWeek, 'day');
-        setActiveDate(nextWeekStart.toDate());
-      }
-    },
-    goToPreviousWeek: () => {
-      const centerWeek = weeks[CENTER_INDEX];
-      if (centerWeek) {
-        const prevWeekStart = getWeekStart(centerWeek.startDate).subtract(numDaysInWeek, 'day');
-        setActiveDate(prevWeekStart.toDate());
-      }
-    }
-  }));
+    };
+
+    return {
+      jumpToDate: handleScrollToDate,
+      scrollToDate: handleScrollToDate,
+      getSelectedDate: () => activeDate,
+      goToNextWeek: () => {
+        const centerWeek = weeks[CENTER_INDEX];
+        if (centerWeek) {
+          const nextWeekStart = getWeekStart(centerWeek.startDate).add(numDaysInWeek, 'day');
+          setActiveDate(nextWeekStart.toDate());
+        }
+      },
+      goToPreviousWeek: () => {
+        const centerWeek = weeks[CENTER_INDEX];
+        if (centerWeek) {
+          const prevWeekStart = getWeekStart(centerWeek.startDate).subtract(numDaysInWeek, 'day');
+          setActiveDate(prevWeekStart.toDate());
+        }
+      },
+      getCurrentWeek: () => weeks[CENTER_INDEX] || null,
+      getWeeks: () => weeks,
+      getCurrentWeekIndex: () => CENTER_INDEX,
+    };
+  });
 
   // Date selection handler
   const handleDateSelection = useCallback(date => {
