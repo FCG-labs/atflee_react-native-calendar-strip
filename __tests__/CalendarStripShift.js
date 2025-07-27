@@ -22,7 +22,7 @@ describe('CalendarStrip week shifting', () => {
 
     const after = ref.current.getCurrentWeek().startDate;
     expect(dayjs(after).diff(dayjs(before), 'day')).toBe(7);
-    expect(ref.current.getWeeks()).toHaveLength(3);
+    expect(ref.current.getWeeks()).toHaveLength(7);
   });
 
   test('shifts left only once per swipe', () => {
@@ -37,7 +37,7 @@ describe('CalendarStrip week shifting', () => {
 
     const after = ref.current.getCurrentWeek().startDate;
     expect(dayjs(before).diff(dayjs(after), 'day')).toBe(7);
-    expect(ref.current.getWeeks()).toHaveLength(3);
+    expect(ref.current.getWeeks()).toHaveLength(7);
   });
 
   test('queues additional right swipe while shifting', () => {
@@ -80,8 +80,8 @@ describe('CalendarStrip week shifting', () => {
     const list = UNSAFE_getByType(FlatList);
     const callback = list.props.viewabilityConfigCallbackPairs[0].onViewableItemsChanged;
 
-    callback({ viewableItems: [{ index: 1 }] });
-    callback({ viewableItems: [{ index: 1 }] });
+    callback({ viewableItems: [{ index: 3 }] });
+    callback({ viewableItems: [{ index: 3 }] });
 
     expect(onWeekChanged).toHaveBeenCalled();
     onWeekChanged.mock.calls.forEach(args => {

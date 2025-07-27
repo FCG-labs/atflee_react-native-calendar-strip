@@ -7,7 +7,7 @@ describe('CalendarStrip initial centering', () => {
   it('centers FlatList without delay when paging enabled', () => {
     const spy = jest.spyOn(FlatList.prototype, 'scrollToIndex').mockImplementation(() => {});
     render(<CalendarStrip showMonth={false} scrollerPaging />);
-    expect(spy).toHaveBeenCalledWith({ index: 1, animated: true });
+    expect(spy).toHaveBeenCalledWith({ index: 3, animated: true });
     spy.mockRestore();
   });
 });
