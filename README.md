@@ -200,7 +200,7 @@ $ yarn add react-native-calendar-strip
 
 ### Scrollable CalendarStrip — New in 2.x
 
-The `scrollable` prop was introduced in 2.0.0 and features a bi-directional infinite scroller.  It uses React Native's [FlatList](https://reactnative.dev/docs/flatlist) to recycle days, shifting the dates as the ends are reached.  The Chrome debugger can cause issues with this updating due to a [RN setTimeout bug](https://github.com/facebook/react-native/issues/4470). To prevent date shifts at the ends of the scroller, set the `minDate` and `maxDate` range to a year or less.
+The `scrollable` prop was introduced in 2.0.0 and features a bi-directional infinite scroller.  By default it uses React Native's [FlatList](https://reactnative.dev/docs/flatlist) to recycle days.  For long ranges you can enable [`useFlashList`](#props) to use [FlashList](https://github.com/Shopify/flash-list) instead.  The Chrome debugger can cause issues with this updating due to a [RN setTimeout bug](https://github.com/facebook/react-native/issues/4470). To prevent date shifts at the ends of the scroller, set the `minDate` and `maxDate` range to a year or less.
 
 The refactor to support `scrollable` introduced internal changes to the `CalendarDay` component.  Users of the `dayComponent` prop may need to adjust their custom day component to accommodate the props passed to it.
 
@@ -331,7 +331,8 @@ AppRegistry.registerComponent('Example', () => Example);
 | **`numDaysInWeek`**  | Number of days shown in week. Applicable only when scrollable is false.                                                                                            | Number   | **`7`**    |
 | **`scrollable`**     | Dates are scrollable if true. | Bool     | **`True`** |
 | **`scrollerPaging`** | Dates are scrollable as a page (7 days) if true (Only works with `scrollable` set to true). | Bool     | **`True`** |
-| **`weekBuffer`**     | Number of weeks kept in memory when scrollable. The visible week plus this many weeks before and after will be rendered. Works with custom `numDaysInWeek`. | Number | **`3`** |
+| **`weekBuffer`**     | Number of weeks kept in memory when scrollable. The visible week plus this many weeks before and after will be rendered. Works with custom `numDaysInWeek`. Weeks are cached internally so raising this value has minimal performance impact. | Number | **`3`** |
+| **`useFlashList`**   | Use FlashList instead of FlatList for large buffers. Requires `@shopify/flash-list` dependency. | Bool | **`False`** |
 | **`startingDate`**   | Date to be used for centering the calendar/showing the week based on that date. It is internally wrapped by `dayjs` so it accepts both `Date` and `dayjs Date`.  | Any      |
 | **`selectedDate`**   | Date to be used as pre selected Date. It is internally wrapped by `dayjs` so it accepts both `Date` and `dayjs Date`.                                            | Any      |
 | **`onDateSelected`** | Function to be used as a callback when a date is selected. Receives param `date` dayjs date.                                                                      | Function |

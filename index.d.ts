@@ -155,6 +155,13 @@ export interface CalendarStripProps {
    * @default 3
    */
   weekBuffer?: number;
+
+  /**
+   * Use FlashList instead of FlatList for large buffers.
+   * Requires '@shopify/flash-list' dependency.
+   * @default false
+   */
+  useFlashList?: boolean;
   
   // Header configuration
   /**
