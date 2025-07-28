@@ -103,9 +103,6 @@ const CalendarStrip = ({
   // Skip onWeekChanged on initial render
   const skipInitialRef = useRef(true);
 
-  const currentWeekRef = useRef('');
-  const skipInitialRef = useRef(true);
-
   // Week generation utility
   const generateWeek = useCallback((startDate) => {
     const start = dayjs(startDate);
