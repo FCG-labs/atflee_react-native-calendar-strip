@@ -98,6 +98,10 @@ const CalendarStrip = ({
 
   // FlatList reference
   const flatListRef = useRef(null);
+  // Track the currently visible week to avoid redundant callbacks
+  const currentWeekRef = useRef(null);
+  // Skip onWeekChanged on initial render
+  const skipInitialRef = useRef(true);
 
   // Week generation utility
   const generateWeek = useCallback((startDate) => {
