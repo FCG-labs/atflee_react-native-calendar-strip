@@ -462,7 +462,7 @@ AppRegistry.registerComponent('Example', () => Example);
 | **`innerStyle`**               | Style for the responsively sized inner view. This is necessary to account for padding/margin from the top level view. The inner view has style `flex:1` by default. If this component is nested within another dynamically sized container, remove the flex style by passing in `[]`. | Any    |
 | **`calendarHeaderStyle`**      | Style for the header text of the calendar                                                                                                  | Any            |
 | **`calendarHeaderContainerStyle`** | Style for the header text wrapper of the calendar                                                                                      | Any            |
-| **`calendarHeaderPosition`**   | Position of the header text (above or below)                                                                                               | `above, below` | **`above`** |
+| **`calendarHeaderPosition`**   | Position of the header text (`top` or `bottom`)                                                                                               | `top, bottom` | **`top`** |
 | **`calendarHeaderFormat`**     | Format for the header text of the calendar. For options, refer to [dayjs documentation](https://day.js.org/docs/en/display/format)    | String         |
 | **`dateNameStyle`**            | Style for the name of the day on work days in dates strip                                                                                  | Any            |
 | **`dateNumberStyle`**          | Style for the number of the day on work days in dates strip.                                                                               | Any            |

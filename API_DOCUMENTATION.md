@@ -39,7 +39,7 @@ yarn add atflee_react-native-calendar-strip
 | --- | --- | --- | --- |
 | `showMonth` | `boolean` | `true` | 월 헤더 표시 여부 |
 | `calendarHeaderFormat` | `string` | `'MMMM YYYY'` | 헤더 날짜 포맷(dayjs 형식) |
-| `calendarHeaderPosition` | `string` | `'top'` | 헤더 위치 ('top', 'bottom') |
+| `calendarHeaderPosition` | `string` | `'top'` | 헤더 위치 (`top` or `bottom`) |
 | `calendarHeaderStyle` | `Object` | `{}` | 헤더 스타일 |
 
 ##### 스타일링

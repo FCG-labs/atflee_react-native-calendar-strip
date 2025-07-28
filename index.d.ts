@@ -178,7 +178,7 @@ export interface CalendarStripProps {
   /**
    * Position of the calendar header
    */
-  calendarHeaderPosition?: "left" | "center" | "right";
+  calendarHeaderPosition?: "top" | "bottom";
   
   /**
    * Style for the calendar header
