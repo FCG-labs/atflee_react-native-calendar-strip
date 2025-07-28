@@ -200,7 +200,7 @@ $ yarn add react-native-calendar-strip
 
 ### Scrollable CalendarStrip — New in 2.x
 
-The `scrollable` prop was introduced in 2.0.0 and features a bi-directional infinite scroller.  It uses [FlashList](https://github.com/Shopify/flash-list) to recycle days, shifting the dates as the ends are reached.  The Chrome debugger can cause issues with this updating due to a [RN setTimeout bug](https://github.com/facebook/react-native/issues/4470). To prevent date shifts at the ends of the scroller, set the `minDate` and `maxDate` range to a year or less.
+The `scrollable` prop was introduced in 2.0.0 and features a bi-directional infinite scroller.  It uses React Native's [FlatList](https://reactnative.dev/docs/flatlist) to recycle days, shifting the dates as the ends are reached.  The Chrome debugger can cause issues with this updating due to a [RN setTimeout bug](https://github.com/facebook/react-native/issues/4470). To prevent date shifts at the ends of the scroller, set the `minDate` and `maxDate` range to a year or less.
 
 The refactor to support `scrollable` introduced internal changes to the `CalendarDay` component.  Users of the `dayComponent` prop may need to adjust their custom day component to accommodate the props passed to it.
 
