@@ -279,7 +279,8 @@ export interface CalendarStripProps {
   onHeaderSelected?: () => void;
   
   /**
-   * Callback to update month/year in parent component
+   * Called when the visible month or year changes.
+   * Allows parent components to track the current view.
    * @param month Two-digit month string ('MM')
    * @param year Four-digit year string ('YYYY')
    */
