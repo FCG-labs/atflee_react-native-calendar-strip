@@ -119,7 +119,8 @@ const CalendarStrip = ({
         month: date.month(),
         year: date.year(),
         isToday: date.isSame(today, 'day'),
-        isCurrentMonth: date.month() === today.month()
+        isCurrentMonth:
+          date.month() === today.month() && date.year() === today.year()
       });
     }
     
