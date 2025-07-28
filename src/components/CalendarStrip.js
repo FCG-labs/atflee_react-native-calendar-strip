@@ -14,7 +14,8 @@ import {
   Dimensions,
   Platform,
   LayoutAnimation,
-  UIManager
+  UIManager,
+  InteractionManager
 } from 'react-native';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -96,8 +97,12 @@ const CalendarStrip = ({
   calendarRef
 }) => {
   // Carousel constants - dynamic window based on weekBuffer
-  const WINDOW_SIZE = weekBuffer * 2 + 1;
-  const CENTER_INDEX = weekBuffer;
+  // When 스크롤이 비활성화(non-scrollable)인 경우에는 주(week)가 한 개만 렌더되므로
+  // WINDOW_SIZE와 CENTER_INDEX를 1, 0으로 고정한다. 그렇지 않으면
+  // weeks[CENTER_INDEX]가 undefined가 되어 onWeekChanged, updateMonthYear 등이
+  // 호출되지 않는 버그가 발생한다.
+  const WINDOW_SIZE = scrollable ? weekBuffer * 2 + 1 : 1;
+  const CENTER_INDEX = scrollable ? weekBuffer : 0;
 
   const ListComponent = useMemo(() => {
     if (useFlashList) {
@@ -224,6 +229,10 @@ const CalendarStrip = ({
       // Invoke callback only if week actually changed and skip initial mount
       if (currentWeekRef.current !== weekKey) {
         if (!skipInitialRef.current && onWeekChanged) {
+          logger.debug('[CALLBACK] onWeekChanged (effect):',
+            dayjs(centerWeek.startDate).format('YYYY-MM-DD'),
+            dayjs(centerWeek.endDate).format('YYYY-MM-DD')
+          );
           onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
         }
         currentWeekRef.current = weekKey;
@@ -332,7 +341,9 @@ const CalendarStrip = ({
       return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
     });
 
-    flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
+    InteractionManager.runAfterInteractions(() => {
+      flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
+    });
 
     return shifted;
   }, [
@@ -365,7 +376,9 @@ const CalendarStrip = ({
       return [...currentWeeks.slice(1), newWeek];
     });
 
-    flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
+    InteractionManager.runAfterInteractions(() => {
+      flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
+    });
 
     return shifted;
   }, [
@@ -407,30 +420,50 @@ const CalendarStrip = ({
   );
 
   
-  // Simplified viewable items handler - just for callbacks
+  // Determine the logical "center" week based on visible items
   const onViewableItemsChanged = useCallback(({ viewableItems }) => {
-    const centerWeek = weeks[CENTER_INDEX];
-    if (centerWeek && onWeekChanged) {
-      onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
+    if (!viewableItems || viewableItems.length === 0) {
+      return;
     }
-    
-    if (centerWeek && updateMonthYear) {
-      const middleDate = dayjs(centerWeek.startDate).add(
-        Math.floor(numDaysInWeek / 2),
-        'day'
-      );
-      const month = middleDate.format('MM');
-      const year = middleDate.format('YYYY');
-      updateMonthYear(month, year);
+
+    // Pick the index that is closest to the middle of the viewport.
+    // Assumption: items array already sorted by their position.
+    const visibleIndices = viewableItems
+      .map(v => v.index)
+      .filter(i => typeof i === 'number');
+
+    if (visibleIndices.length === 0) return;
+
+    // Choose the median index as an approximation of the centered item
+    visibleIndices.sort((a, b) => a - b);
+    const medianIdx = visibleIndices[Math.floor(visibleIndices.length / 2)];
+    const centerWeek = weeks[medianIdx];
+
+    if (!centerWeek) return;
+
+    const weekKey = `${dayjs(centerWeek.startDate).format('YYYY-MM-DD')}_${dayjs(centerWeek.endDate).format('YYYY-MM-DD')}`;
+
+    // Avoid redundant callbacks if week hasn't changed
+    if (currentWeekRef.current !== weekKey) {
+      if (onWeekChanged) {
+        logger.debug('[CALLBACK] onWeekChanged (viewable):',
+          dayjs(centerWeek.startDate).format('YYYY-MM-DD'),
+          dayjs(centerWeek.endDate).format('YYYY-MM-DD')
+        );
+        onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
+      }
+
+      if (updateMonthYear) {
+        const middleDate = dayjs(centerWeek.startDate).add(
+          Math.floor(numDaysInWeek / 2),
+          'day'
+        );
+        updateMonthYear(middleDate.format('MM'), middleDate.format('YYYY'));
+      }
+
+      currentWeekRef.current = weekKey;
     }
-  }, [
-    weeks,
-    onWeekChanged,
-    updateMonthYear,
-    numDaysInWeek,
-    CENTER_INDEX,
-    weekBuffer,
-  ]);
+  }, [weeks, numDaysInWeek, onWeekChanged, updateMonthYear]);
 
   // Imperative methods
   React.useImperativeHandle(calendarRef, () => {
