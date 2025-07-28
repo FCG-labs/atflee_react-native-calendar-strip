@@ -99,6 +99,9 @@ const CalendarStrip = ({
   // FlatList reference
   const flatListRef = useRef(null);
 
+  const currentWeekRef = useRef('');
+  const skipInitialRef = useRef(true);
+
   // Week generation utility
   const generateWeek = useCallback((startDate) => {
     const start = dayjs(startDate);
