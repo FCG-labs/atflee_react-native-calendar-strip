@@ -48,6 +48,7 @@ const CalendarStrip = ({
   scrollerPaging,
   weekBuffer = 3,
   useFlashList = false,
+  flashListEstimatedItemSize,
   
   // Header configuration
   showMonth,
@@ -602,6 +603,9 @@ const CalendarStrip = ({
             onScrollEndDrag={onScrollEnd}
             viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
             initialScrollIndex={CENTER_INDEX}
+            {...(useFlashList && flashListEstimatedItemSize
+              ? { estimatedItemSize: flashListEstimatedItemSize }
+              : {})}
           />
         ) : (
           <View style={[styles.week, { width: contentWidth }]}>
@@ -689,6 +693,7 @@ CalendarStrip.propTypes = {
   scrollerPaging: PropTypes.bool,
   weekBuffer: PropTypes.number,
   useFlashList: PropTypes.bool,
+  flashListEstimatedItemSize: PropTypes.number,
 
   // Header configuration
   showMonth: PropTypes.bool,
@@ -762,6 +767,7 @@ CalendarStrip.defaultProps = {
   scrollerPaging: true,
   weekBuffer: 3,
   useFlashList: false,
+  flashListEstimatedItemSize: undefined,
 
   // Header configuration defaults
   showMonth: true,
