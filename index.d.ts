@@ -162,6 +162,12 @@ export interface CalendarStripProps {
    * @default false
    */
   useFlashList?: boolean;
+
+  /**
+   * Estimated item size to pass to FlashList.
+   * Helps avoid warnings when using FlashList.
+   */
+  flashListEstimatedItemSize?: number;
   
   // Header configuration
   /**
