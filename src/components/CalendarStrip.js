@@ -47,6 +47,7 @@ const CalendarStrip = ({
   scrollable,
   scrollerPaging,
   weekBuffer = 3,
+  useFlashList = false,
   
   // Header configuration
   showMonth,
@@ -96,12 +97,27 @@ const CalendarStrip = ({
   const WINDOW_SIZE = weekBuffer * 2 + 1;
   const CENTER_INDEX = weekBuffer;
 
+  const ListComponent = useMemo(() => {
+    if (useFlashList) {
+      try {
+        // eslint-disable-next-line global-require
+        return require('@shopify/flash-list').FlashList;
+      } catch (err) {
+        logger.debug('[WARN] FlashList not installed, falling back to FlatList');
+      }
+    }
+    return FlatList;
+  }, [useFlashList]);
+
   // FlatList reference
   const flatListRef = useRef(null);
   // Track the currently visible week to avoid redundant callbacks
-  const currentWeekRef = useRef(null);
+  const currentWeekRef = useRef('');
   // Skip onWeekChanged on initial render
   const skipInitialRef = useRef(true);
+
+  // Cache previously generated weeks to avoid regeneration when buffer is large
+  const weekCacheRef = useRef(new Map());
 
   // Week generation utility
   const generateWeek = useCallback((startDate) => {
@@ -136,11 +152,29 @@ const CalendarStrip = ({
     return useIsoWeekday ? d.startOf('isoWeek') : d.startOf('week');
   }, [useIsoWeekday]);
 
+  // Retrieve a week from cache or generate and store it
+  const getCachedWeek = useCallback(
+    (startDate) => {
+      const key = dayjs(startDate).startOf('day').format('YYYY-MM-DD');
+      const cached = weekCacheRef.current.get(key);
+      if (cached) {
+        return cached;
+      }
+      const week = generateWeek(startDate);
+      weekCacheRef.current.set(key, week);
+      return week;
+    },
+    [generateWeek]
+  );
+
   // Initialize carousel window
   const initCarousel = useCallback(() => {
     logger.debug('[INIT] Creating carousel window');
     const currentDate = selectedDate || startingDate || new Date();
     logger.debug('[INIT] Current date:', dayjs(currentDate).format('YYYY-MM-DD'));
+
+    // Clear cache when rebuilding the carousel to avoid stale weeks
+    weekCacheRef.current.clear();
 
     const weekStart = getWeekStart(currentDate);
     logger.debug('[INIT] Week start:', weekStart.format('YYYY-MM-DD'));
@@ -149,14 +183,14 @@ const CalendarStrip = ({
 
     if (!scrollable) {
       // Only generate the current week when not scrollable
-      const week = generateWeek(weekStart);
+      const week = getCachedWeek(weekStart);
       logger.debug('[INIT] Week 1:', dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
       weeks.push(week);
     } else {
       // Generate window of weeks around the active date
       for (let i = -weekBuffer; i <= weekBuffer; i++) {
         const start = weekStart.add(i * numDaysInWeek, 'day');
-        const week = generateWeek(start);
+        const week = getCachedWeek(start);
         logger.debug(`[INIT] Week ${i + 1}:`, dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
         weeks.push(week);
       }
@@ -168,7 +202,7 @@ const CalendarStrip = ({
     selectedDate,
     startingDate,
     getWeekStart,
-    generateWeek,
+    getCachedWeek,
     numDaysInWeek,
     weekBuffer,
   ]);
@@ -292,7 +326,7 @@ const CalendarStrip = ({
       }
 
       shifted = true;
-      const newWeek = generateWeek(prevWeekStart);
+      const newWeek = getCachedWeek(prevWeekStart);
       return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
     });
 
@@ -300,7 +334,7 @@ const CalendarStrip = ({
 
     return shifted;
   }, [
-    generateWeek,
+    getCachedWeek,
     getWeekStart,
     numDaysInWeek,
     minDate,
@@ -325,7 +359,7 @@ const CalendarStrip = ({
       }
 
       shifted = true;
-      const newWeek = generateWeek(nextWeekStart);
+      const newWeek = getCachedWeek(nextWeekStart);
       return [...currentWeeks.slice(1), newWeek];
     });
 
@@ -333,7 +367,7 @@ const CalendarStrip = ({
 
     return shifted;
   }, [
-    generateWeek,
+    getCachedWeek,
     getWeekStart,
     numDaysInWeek,
     maxDate,
@@ -553,7 +587,7 @@ const CalendarStrip = ({
         <View onLayout={onLeftLayout}>{leftSelector}</View>
         
         {scrollable ? (
-          <FlatList
+          <ListComponent
             ref={flatListRef}
             data={weeks}
             renderItem={renderWeek}
@@ -648,6 +682,7 @@ CalendarStrip.propTypes = {
   scrollable: PropTypes.bool,
   scrollerPaging: PropTypes.bool,
   weekBuffer: PropTypes.number,
+  useFlashList: PropTypes.bool,
 
   // Header configuration
   showMonth: PropTypes.bool,
@@ -719,6 +754,7 @@ CalendarStrip.defaultProps = {
   scrollable: true,
   scrollerPaging: true,
   weekBuffer: 3,
+  useFlashList: false,
 
   // Header configuration defaults
   showMonth: true,
