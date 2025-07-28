@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { FlatList } from 'react-native';
+import { FlatList, View } from 'react-native';
 import CalendarStrip from '../src/components/CalendarStrip';
 
 describe('CalendarStrip functional API', () => {
@@ -117,5 +117,15 @@ describe('CalendarStrip functional API', () => {
     const weeksAfter = ref.current.getWeeks();
     expect(weeksAfter).toHaveLength(5);
     expect(weeksAfter).not.toBe(weeksBefore);
+  });
+
+  test('applies innerStyle to inner container', () => {
+    const { UNSAFE_getAllByType } = render(
+      <CalendarStrip showMonth={false} innerStyle={{ backgroundColor: 'red' }} />
+    );
+    const views = UNSAFE_getAllByType(View);
+    expect(views[1].props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ backgroundColor: 'red' })])
+    );
   });
 });
