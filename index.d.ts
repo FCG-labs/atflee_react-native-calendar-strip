@@ -190,6 +190,11 @@ export interface CalendarStripProps {
    * Container style for the calendar
    */
   style?: StyleProp<ViewStyle>;
+
+  /**
+   * Style for the inner container view
+   */
+  innerStyle?: StyleProp<ViewStyle>;
   
   /**
    * Background color of the calendar

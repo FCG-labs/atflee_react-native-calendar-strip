@@ -57,6 +57,7 @@ const CalendarStrip = ({
   
   // Styling
   style,
+  innerStyle,
   calendarColor,
   highlightColor,
   dateNameStyle,
@@ -573,18 +574,19 @@ const CalendarStrip = ({
 
   return (
     <View style={[styles.container, style]} onLayout={onLayout}>
-      {showMonth && (
-        <CalendarHeader
-          calendarHeaderFormat={calendarHeaderFormat}
-          calendarHeaderStyle={calendarHeaderStyle}
-          testID="calendar_header"
-          activeDate={activeDate}
-          onHeaderSelected={onHeaderSelected}
-        />
-      )}
-      
-      <View style={styles.calendarContainer}>
-        <View onLayout={onLeftLayout}>{leftSelector}</View>
+      <View style={[styles.inner, innerStyle]}>
+        {showMonth && (
+          <CalendarHeader
+            calendarHeaderFormat={calendarHeaderFormat}
+            calendarHeaderStyle={calendarHeaderStyle}
+            testID="calendar_header"
+            activeDate={activeDate}
+            onHeaderSelected={onHeaderSelected}
+          />
+        )}
+
+        <View style={styles.calendarContainer}>
+          <View onLayout={onLeftLayout}>{leftSelector}</View>
         
         {scrollable ? (
           <ListComponent
@@ -641,12 +643,16 @@ const CalendarStrip = ({
         <View onLayout={onRightLayout}>{rightSelector}</View>
       </View>
     </View>
+  </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+  },
+  inner: {
+    flex: 1,
   },
   calendarContainer: {
     flexDirection: 'row',
@@ -695,6 +701,7 @@ CalendarStrip.propTypes = {
 
   // Styling
   style: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  innerStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   calendarColor: PropTypes.string,
   highlightColor: PropTypes.string,
   dateNameStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
@@ -764,6 +771,7 @@ CalendarStrip.defaultProps = {
 
   // Styling defaults
   style: {},
+  innerStyle: {},
   calendarColor: '#fff',
   highlightColor: '#000',
   dateNameStyle: {},
