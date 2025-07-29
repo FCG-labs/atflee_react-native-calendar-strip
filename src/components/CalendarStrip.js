@@ -18,16 +18,17 @@ import {
   UIManager,
   InteractionManager
 } from 'react-native';
-import dayjs from 'dayjs';
-import isoWeek from 'dayjs/plugin/isoWeek';
+import dayjs from '../dayjs';
+
 
 // Initialize dayjs plugins
-dayjs.extend(isoWeek);
+
 
 // Components
 import CalendarHeader from '../CalendarHeader';
 import CalendarDateItem from './CalendarDateItem';
 import logger from '../utils/logger';
+
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -689,13 +690,12 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     return (
       <View style={[styles.week, { width: contentWidth }]}>
         {week.days.map(day => (
-          <CalendarDateItem
-            key={day.dateString + (dayjs(day.date).isSame(dayjs(activeDate), 'day') ? '-active' : '')}
+          <CalendarDateItem isActive={day.epoch === activeEpoch}
+            key={`${day.dateString}${day.epoch === activeEpoch ? '-active' : ''}`}
             date={day.date}
             dateNumber={day.dayOfMonth}
             dayName={upperCaseDays ? day.dayNameUpper : day.dayName}
             isToday={day.isToday}
-            isActive={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
             isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
             isCurrentMonth={day.isCurrentMonth}
             onDateSelected={() => handleDateSelection(day.date)}
@@ -720,7 +720,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
       </View>
     );
   }, [
-    contentWidth, upperCaseDays, activeDate, handleDateSelection,
+    contentWidth, upperCaseDays, activeEpoch, handleDateSelection,
     markedDates, markedDatesStyle, markerComponent, dayComponent,
     dateNameStyle, dateNumberStyle, highlightDateNameStyle,
     highlightDateNumberStyle, dayContainerStyle, calendarColor,
@@ -755,6 +755,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
   const log = (__DEV__ && debug) ? logger.debug : () => {};
 
   return (
+    
     <View style={[styles.container, style]} onLayout={onLayout}>
       <View style={[styles.inner, innerStyle]}>
         {showMonth && (
@@ -770,73 +771,73 @@ const CalendarStrip = forwardRef(function CalendarStrip({
         <View style={styles.calendarContainer}>
           <View onLayout={onLeftLayout}>{leftSelector}</View>
         
-        {scrollable ? (
-          <ListComponent
-            ref={flatListRef}
-            data={weeks}
-            renderItem={renderWeek}
-            keyExtractor={keyExtractor}
-            // extraData={activeDate} // force re-render on active date change
-            horizontal
-            pagingEnabled={scrollerPaging}
-            showsHorizontalScrollIndicator={false}
-            getItemLayout={getItemLayout}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-            onMomentumScrollEnd={onScrollEnd}
-            onScrollEndDrag={onScrollEnd}
-            viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
-            initialScrollIndex={CENTER_INDEX}
-            {...(!useFlashList
-              ? {
-                  maintainVisibleContentPosition: {
-                    // keep at least the first half of buffer in view before auto-shift triggers
-                    minIndexForVisible: Math.floor(weekBuffer / 2),
-                  },
-                }
-              : {})}
-            {...(useFlashList && flashListEstimatedItemSize
-              ? { estimatedItemSize: flashListEstimatedItemSize }
-              : {})}
-          />
-        ) : (
-          <View style={[styles.week, { width: contentWidth }]}>
-            {weeks[CENTER_INDEX]?.days.map(day => (
-              <CalendarDateItem
-                key={day.dateString + (dayjs(day.date).isSame(dayjs(activeDate), 'day') ? '-active' : '')}
-                date={day.date}
-                dateNumber={day.dayOfMonth}
-                dayName={upperCaseDays ? day.dayNameUpper : day.dayName}
-                isToday={day.isToday}
-                isActive={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
-                isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
-                isCurrentMonth={day.isCurrentMonth}
-                onDateSelected={() => handleDateSelection(day.date)}
-                markedDates={markedDates}
-                markedDatesStyle={markedDatesStyle}
-                markerComponent={markerComponent}
-                dayComponent={dayComponent}
-                dateNameStyle={dateNameStyle}
-                dateNumberStyle={dateNumberStyle}
-                highlightDateNameStyle={highlightDateNameStyle}
-                highlightDateNumberStyle={highlightDateNumberStyle}
-                dayContainerStyle={dayContainerStyle}
-                calendarColor={calendarColor}
-                highlightColor={highlightColor}
-                disabledDateOpacity={disabledDateOpacity}
-                styleWeekend={styleWeekend}
-                showDayName={showDayName}
-                showDayNumber={showDayNumber}
-                allowDayTextScaling={allowDayTextScaling}
-              />
-            ))}
-          </View>
-        )}
+          {scrollable ? (
+            <ListComponent
+              extraData={activeEpoch}
+              ref={flatListRef}
+              data={weeks}
+              renderItem={renderWeek}
+              keyExtractor={keyExtractor}
+              
+              horizontal
+              pagingEnabled={scrollerPaging}
+              showsHorizontalScrollIndicator={false}
+              getItemLayout={getItemLayout}
+              onScroll={onScroll}
+              scrollEventThrottle={16}
+              onMomentumScrollEnd={onScrollEnd}
+              onScrollEndDrag={onScrollEnd}
+              viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
+              initialScrollIndex={CENTER_INDEX}
+              {...(!useFlashList
+                ? {
+                    maintainVisibleContentPosition: {
+                      // keep at least the first half of buffer in view before auto-shift triggers
+                      minIndexForVisible: Math.floor(weekBuffer / 2),
+                    },
+                  }
+                : {})}
+              {...(useFlashList && flashListEstimatedItemSize
+                ? { estimatedItemSize: flashListEstimatedItemSize }
+                : {})}
+            />
+          ) : (
+            <View style={[styles.week, { width: contentWidth }]}>
+              {weeks[CENTER_INDEX]?.days.map(day => (
+                <CalendarDateItem isActive={day.epoch === activeEpoch}
+                  key={`${day.dateString}${day.epoch === activeEpoch ? '-active' : ''}`}
+                  date={day.date}
+                  dateNumber={day.dayOfMonth}
+                  dayName={upperCaseDays ? day.dayNameUpper : day.dayName}
+                  isToday={day.isToday}
+                  isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
+                  isCurrentMonth={day.isCurrentMonth}
+                  onDateSelected={() => handleDateSelection(day.date)}
+                  markedDates={markedDates}
+                  markedDatesStyle={markedDatesStyle}
+                  markerComponent={markerComponent}
+                  dayComponent={dayComponent}
+                  dateNameStyle={dateNameStyle}
+                  dateNumberStyle={dateNumberStyle}
+                  highlightDateNameStyle={highlightDateNameStyle}
+                  highlightDateNumberStyle={highlightDateNumberStyle}
+                  dayContainerStyle={dayContainerStyle}
+                  calendarColor={calendarColor}
+                  highlightColor={highlightColor}
+                  disabledDateOpacity={disabledDateOpacity}
+                  styleWeekend={styleWeekend}
+                  showDayName={showDayName}
+                  showDayNumber={showDayNumber}
+                  allowDayTextScaling={allowDayTextScaling}
+                />
+              ))}
+            </View>
+          )}
         
-        <View onLayout={onRightLayout}>{rightSelector}</View>
+          <View onLayout={onRightLayout}>{rightSelector}</View>
+        </View>
       </View>
     </View>
-  </View>
   );
 });
 
