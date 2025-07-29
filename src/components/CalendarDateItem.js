@@ -41,10 +41,17 @@ const CalendarDateItem = memo(({
   // Generate accessibility label for the date
   const accessibilityLabel = dayjs(date).format('dddd, MMMM D, YYYY');
   
-  // Check if this date has a marker
-  const hasMarker = markedDates && markedDates.find(markedDate => 
-    dayjs(markedDate.date).isSame(dayjs(date), 'day')
-  );
+  // --- Detect if this date is marked -------------------------
+  const hasMarker = markedDates && markedDates.find(m => {
+    // Accept raw string/Date/Dayjs, or object with `.date`
+    let d;
+    if (typeof m === 'string' || m instanceof Date || dayjs.isDayjs(m)) {
+      d = m;
+    } else if (m && 'date' in m) {
+      d = m.date;
+    }
+    return d ? dayjs(d).isSame(dayjs(date), 'day') : false;
+  });
   
   // Apply custom styling for weekend if enabled
   const isStyledWeekend = styleWeekend && isWeekend;
@@ -128,14 +135,24 @@ const CalendarDateItem = memo(({
           </Text>
         )}
         
-        {/* Render marker if this date is marked */}
-        {hasMarker && markerComponent ? markerComponent(hasMarker) : (
+        {hasMarker && markerComponent ? (
+          markerComponent(hasMarker)
+        ) : (
           hasMarker && (
-            <View style={[
-              styles.marker,
-              { backgroundColor: hasMarker.color || '#4296F0' },
-              markedDatesStyle
-            ]} />
+            <View
+              style={[
+                styles.marker,
+                {
+                  backgroundColor:
+                    typeof hasMarker === 'object' && hasMarker?.dots?.[0]?.color
+                      ? hasMarker.dots[0].color
+                      : (typeof hasMarker === 'object' && hasMarker.color)
+                        ? hasMarker.color
+                        : '#4296F0',
+                },
+                markedDatesStyle,
+              ]}
+            />
           )
         )}
       </View>
@@ -199,6 +216,7 @@ CalendarDateItem.propTypes = {
   allowDayTextScaling: PropTypes.bool,
   dayComponent: PropTypes.func,
   onDateSelected: PropTypes.func.isRequired,
+  // Accept array of objects or array of raw date strings / Date objects
   markedDates: PropTypes.array,
   markedDatesStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   markerComponent: PropTypes.func,

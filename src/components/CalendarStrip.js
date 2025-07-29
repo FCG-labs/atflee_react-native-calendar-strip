@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useLayoutEffect,
   useMemo,
+  forwardRef,
 } from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -37,7 +38,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
  * CalendarStrip Component - Carousel Pattern
  * Fixed 5-week window with center-focused infinite scrolling
  */
-const CalendarStrip = ({
+const CalendarStrip = forwardRef(function CalendarStrip({
+  debug = false,
   // Calendar configuration
   selectedDate,
   startingDate,
@@ -95,7 +97,7 @@ const CalendarStrip = ({
   
   // Reference
   calendarRef
-}) => {
+}) {
   // Carousel constants - dynamic window based on weekBuffer
   // When 스크롤이 비활성화(non-scrollable)인 경우에는 주(week)가 한 개만 렌더되므로
   // WINDOW_SIZE와 CENTER_INDEX를 1, 0으로 고정한다. 그렇지 않으면
@@ -146,24 +148,30 @@ const CalendarStrip = ({
     const days = [];
     
     for (let i = 0; i < numDaysInWeek; i++) {
-      const date = start.add(i, 'day');
+      const d = start.add(i, 'day');
+      const epoch = d.valueOf();
+      const dayName = d.format('ddd');
       days.push({
-        date: date,
-        dateString: date.format('YYYY-MM-DD'),
-        dayOfWeek: date.day(),
-        dayOfMonth: date.date(),
-        month: date.month(),
-        year: date.year(),
-        isToday: date.isSame(today, 'day'),
-        isCurrentMonth:
-          date.month() === today.month() && date.year() === today.year()
+        // store lightweight Date object (or epoch) instead of full dayjs instance
+        date: new Date(epoch),
+        epoch,
+        dateString: dayName ? `${d.format('YYYY-MM-DD')}` : '',
+        dayName,
+        dayNameUpper: dayName.toUpperCase(),
+        dayOfWeek: d.day(),
+        dayOfMonth: d.date(),
+        month: d.month(),
+        year: d.year(),
+        isToday: d.isSame(today, 'day'),
+        isCurrentMonth: d.month() === today.month() && d.year() === today.year(),
       });
     }
     
     return {
-      startDate: start.toDate(),
-      endDate: start.add(numDaysInWeek - 1, 'day').toDate(),
-      days
+      // keep Dayjs objects to avoid implicit timezone shifts when serialized
+      startDate: start.clone(),
+      endDate: start.add(numDaysInWeek - 1, 'day').clone(),
+      days,
     };
   }, [numDaysInWeek]);
 
@@ -189,34 +197,28 @@ const CalendarStrip = ({
 
   // Initialize carousel window
   const initCarousel = useCallback(() => {
-    logger.debug('[INIT] Creating carousel window');
     const currentDate = selectedDate || startingDate || new Date();
-    logger.debug('[INIT] Current date:', dayjs(currentDate).format('YYYY-MM-DD'));
 
     // Clear cache when rebuilding the carousel to avoid stale weeks
     weekCacheRef.current.clear();
 
     const weekStart = getWeekStart(currentDate);
-    logger.debug('[INIT] Week start:', weekStart.format('YYYY-MM-DD'));
 
     const weeks = [];
 
     if (!scrollable) {
       // Only generate the current week when not scrollable
       const week = getCachedWeek(weekStart);
-      logger.debug('[INIT] Week 1:', dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
       weeks.push(week);
     } else {
       // Generate window of weeks around the active date
       for (let i = -weekBuffer; i <= weekBuffer; i++) {
         const start = weekStart.add(i * numDaysInWeek, 'day');
         const week = getCachedWeek(start);
-        logger.debug(`[INIT] Week ${i + 1}:`, dayjs(week.startDate).format('YYYY-MM-DD'), 'to', dayjs(week.endDate).format('YYYY-MM-DD'));
         weeks.push(week);
       }
     }
 
-    logger.debug('[INIT] Created', weeks.length, 'weeks');
     return weeks;
   }, [
     selectedDate,
@@ -229,7 +231,6 @@ const CalendarStrip = ({
 
   // State - Fixed carousel window
   const [weeks, setWeeks] = useState(() => {
-    logger.debug('[STATE] Initializing weeks state');
     return initCarousel();
   });
 
@@ -247,10 +248,6 @@ const CalendarStrip = ({
       // Invoke callback only if week actually changed and skip initial mount
       if (currentWeekRef.current !== weekKey) {
         if (!skipInitialRef.current && onWeekChanged) {
-          logger.debug('[CALLBACK] onWeekChanged (effect):',
-            dayjs(centerWeek.startDate).format('YYYY-MM-DD'),
-            dayjs(centerWeek.endDate).format('YYYY-MM-DD')
-          );
           onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
         }
         currentWeekRef.current = weekKey;
@@ -271,9 +268,9 @@ const CalendarStrip = ({
   
   const [activeDate, setActiveDate] = useState(() => {
     const date = selectedDate || startingDate || new Date();
-    logger.debug('[STATE] Initial active date:', dayjs(date).format('YYYY-MM-DD'));
     return date;
   });
+  const prevActiveDateRef = useRef(activeDate);
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
   const [leftWidth, setLeftWidth] = useState(0);
   const [rightWidth, setRightWidth] = useState(0);
@@ -285,28 +282,42 @@ const CalendarStrip = ({
 
   // Handle selectedDate changes
   useEffect(() => {
-    logger.debug('[EFFECT] selectedDate changed:', selectedDate ? dayjs(selectedDate).format('YYYY-MM-DD') : 'null');
-    logger.debug('[EFFECT] activeDate:', dayjs(activeDate).format('YYYY-MM-DD'));
     
     if (selectedDate && !dayjs(selectedDate).isSame(dayjs(activeDate), 'day')) {
-      logger.debug('[EFFECT] Setting new active date');
       setActiveDate(selectedDate);
+      
+      // Invalidate only the two weeks that changed active state (prev & next)
+      const prevWeekStart = getWeekStart(prevActiveDateRef.current);
+      const nextWeekStart = getWeekStart(selectedDate);
+
+      if (!prevWeekStart.isSame(nextWeekStart, 'day')) {
+        setWeeks(currWeeks =>
+          currWeeks.map(week => {
+            const weekStart = getWeekStart(week.startDate);
+            if (
+              weekStart.isSame(prevWeekStart, 'day') ||
+              weekStart.isSame(nextWeekStart, 'day')
+            ) {
+              return { ...week }; // shallow clone – new reference triggers rerender
+            }
+            return week;
+          })
+        );
+      }
+
+      prevActiveDateRef.current = selectedDate;
       
       // Check if selectedDate is in current window
       const targetWeekStart = getWeekStart(selectedDate);
-      logger.debug('[EFFECT] Target week start:', targetWeekStart.format('YYYY-MM-DD'));
       
       const isInWindow = weeks.some(week => {
         const weekStart = getWeekStart(week.startDate);
         const match = weekStart.isSame(targetWeekStart, 'day');
-        logger.debug('[EFFECT] Checking week:', weekStart.format('YYYY-MM-DD'), 'matches:', match);
         return match;
       });
       
-      logger.debug('[EFFECT] Is in current window:', isInWindow);
       
       if (!isInWindow) {
-        logger.debug('[EFFECT] Rebuilding carousel around selected date');
         didInitialCenterRef.current = false; // allow next layout effect to recenter
         const newWeeks = initCarousel();
         setWeeks(newWeeks);
@@ -319,7 +330,6 @@ const CalendarStrip = ({
           getWeekStart(week.startDate).isSame(targetWeekStart, 'day')
         );
         if (targetIdx !== -1) {
-          logger.debug('[EFFECT] Scrolling to existing week index:', targetIdx);
           requestAnimationFrame(() => {
             flatListRef.current?.scrollToIndex({ index: targetIdx, animated: scrollerPaging });
           });
@@ -343,6 +353,12 @@ const CalendarStrip = ({
       onRenderComplete(end - startTimeRef.current);
     }
   }, [viewWidth, scrollerPaging, onRenderComplete]);
+
+  useLayoutEffect(() => {
+    if (isShiftingRef.current) {
+      flushCompensation();   // **즉시** 오프셋 보정
+    }
+  }, [weeks]);               // weeks 가 바뀔 때마다
 
   // True Carousel: Real-time scroll threshold detection
   const isShiftingRef = useRef(false);
@@ -385,7 +401,6 @@ const CalendarStrip = ({
       return [...weeksToAdd, ...currentWeeks.slice(0, WINDOW_SIZE - addedCount)];
     });
 
-    logger.debug('[SHIFT] shiftLeft addedCount:', addedCount);
     queueCompensation(addedCount);
      return true;
   }, [
@@ -430,7 +445,6 @@ const CalendarStrip = ({
       return [...currentWeeks.slice(addedCount), ...weeksToAdd];
     });
 
-    logger.debug('[SHIFT] shiftRight addedCount:', addedCount);
     queueCompensation(-addedCount);
     // isShiftingRef will be cleared inside rAF
     return true;
@@ -447,9 +461,6 @@ const CalendarStrip = ({
 
   // Edge detection for rubber-band overscroll
   const edgeShiftHandledRef = useRef(false);
-  const EDGE_THRESHOLD = 0.6;        // 60 % of item width
-  const EDGE_DEBOUNCE_MS = 120;      // debounce to avoid rapid loops
-  const lastEdgeShiftTsRef = useRef(0);
 
   const onScrollEnd = useCallback(
     (event) => {
@@ -476,13 +487,6 @@ const CalendarStrip = ({
       if (page === CENTER_INDEX) {
         edgeShiftHandledRef.current = false;
       }
-
-      logger.debug(
-        '[CAROUSEL] Scroll end page:', page,
-        'rawX:', rawX,
-        'snapped:', snappedOffset,
-        'isShifting:', isShiftingRef.current,
-      );
 
       // If a shift animation is still in progress, flush pending queue.
       if (isShiftingRef.current) {
@@ -515,7 +519,6 @@ const CalendarStrip = ({
   const onScroll = useCallback(event => {
     const offsetX = event.nativeEvent.contentOffset.x;
     lastOffsetRef.current = offsetX; // keep ref in sync
-    logger.debug('[SCROLL] offsetX:', offsetX);
   }, []);
 
   // flush pending compensation using latest width
@@ -524,7 +527,6 @@ const CalendarStrip = ({
     if (!k) return;
     pendingDeltaRef.current = 0;
 
-    logger.debug('[COMP] flush start k:', k, 'lastOffset:', lastOffsetRef.current, 'width:', contentWidthRef.current);
     const w = contentWidthRef.current;
     if (w <= 0) return;
 
@@ -534,7 +536,6 @@ const CalendarStrip = ({
     newOffset = Math.max(0, Math.min(newOffset, maxOffset));
 
     lastOffsetRef.current = newOffset;
-    logger.debug('[COMP] flush applied newOffset:', newOffset);
     flatListRef.current?.scrollToOffset({ offset: newOffset, animated: false });
     isShiftingRef.current = false;
   }, [WINDOW_SIZE]);
@@ -543,11 +544,20 @@ const CalendarStrip = ({
   const queueCompensation = useCallback((deltaK) => {
     if (deltaK === 0) return;
     pendingDeltaRef.current += deltaK;
-    logger.debug('[COMP] queue deltaK:', deltaK, 'pendingDelta now:', pendingDeltaRef.current);
     requestAnimationFrame(flushCompensation);
   }, [flushCompensation]);
 
   const onViewableItemsChanged = useCallback(({ viewableItems }) => {
+    // Prevent spurious callbacks when the carousel internally shifts its window
+    // (e.g. the user hits the edge and we prepend/append weeks). At that time
+    // `viewableItems` changes even though the user hasn’t explicitly scrolled
+    // to a new week yet. We simply ignore those interim events; once the
+    // compensation completes and `isShiftingRef` is cleared, the next
+    // viewability change (triggered by real user interaction) will fire the
+    // correct callbacks.
+    if (isShiftingRef.current) {
+      return;
+    }
     if (!viewableItems || viewableItems.length === 0) {
       return;
     }
@@ -580,10 +590,6 @@ const CalendarStrip = ({
     // Avoid redundant callbacks if week hasn't changed
     if (currentWeekRef.current !== weekKey) {
       if (onWeekChanged) {
-        logger.debug('[CALLBACK] onWeekChanged (viewable):',
-          dayjs(centerWeek.startDate).format('YYYY-MM-DD'),
-          dayjs(centerWeek.endDate).format('YYYY-MM-DD')
-        );
         onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
       }
 
@@ -639,24 +645,19 @@ const CalendarStrip = ({
 
   // Date selection handler
   const handleDateSelection = useCallback(date => {
-    logger.debug('[DATE] Date selected:', dayjs(date).format('YYYY-MM-DD'));
     
     const dateObj = dayjs(date);
     if (minDate && dateObj.isBefore(dayjs(minDate), 'day')) {
-      logger.debug('[DATE] Date before minDate, ignoring');
       return;
     }
     if (maxDate && dateObj.isAfter(dayjs(maxDate), 'day')) {
-      logger.debug('[DATE] Date after maxDate, ignoring');
       return;
     }
 
-    logger.debug('[DATE] Setting active date to:', dayjs(date).format('YYYY-MM-DD'));
-    setActiveDate(date);
+    setActiveDate(dateObj);
 
     if (onDateSelected) {
-      logger.debug('[DATE] Calling onDateSelected callback');
-      onDateSelected(date);
+      onDateSelected(dateObj);
     }
   }, [onDateSelected, minDate, maxDate]);
 
@@ -691,7 +692,6 @@ const CalendarStrip = ({
        newWidth !== prevWidth &&
        pendingDeltaRef.current === 0
      ) {
-      logger.debug('[WIDTH] change prev->new:', prevWidth, '->', newWidth, 'lastOffset:', lastOffsetRef.current);
       const page = prevWidth > 0 ? Math.round(lastOffsetRef.current / prevWidth) : 0;
       const corrected = page * newWidth;
 
@@ -712,13 +712,10 @@ const CalendarStrip = ({
       <View style={[styles.week, { width: contentWidth }]}>
         {week.days.map(day => (
           <CalendarDateItem
-            key={day.dateString}
+            key={day.dateString + (dayjs(day.date).isSame(dayjs(activeDate), 'day') ? '-active' : '')}
             date={day.date}
             dateNumber={day.dayOfMonth}
-            dayName={upperCaseDays
-              ? day.date.format('ddd').toUpperCase()
-              : day.date.format('ddd')
-            }
+            dayName={upperCaseDays ? day.dayNameUpper : day.dayName}
             isToday={day.isToday}
             isActive={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
             isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
@@ -753,7 +750,10 @@ const CalendarStrip = ({
     showDayName, showDayNumber, allowDayTextScaling
   ]);
 
-  const keyExtractor = useCallback(week => week.startDate.toISOString(), []);
+  const keyExtractor = useCallback(
+    week => (week.startDate && week.startDate.format ? week.startDate.format('YYYY-MM-DD') : String(week.epochStart || '')),
+    []
+  );
 
   const getItemLayout = useCallback((data, index) => ({
     length: contentWidth,
@@ -772,6 +772,9 @@ const CalendarStrip = ({
   useEffect(() => {
     viewabilityConfigCallbackPairs.current[0].onViewableItemsChanged = onViewableItemsChanged;
   }, [onViewableItemsChanged]);
+
+  // Lightweight logger wrapper – disabled unless `debug` prop is true in dev
+  const log = (__DEV__ && debug) ? logger.debug : () => {};
 
   return (
     <View style={[styles.container, style]} onLayout={onLayout}>
@@ -795,7 +798,7 @@ const CalendarStrip = ({
             data={weeks}
             renderItem={renderWeek}
             keyExtractor={keyExtractor}
-            extraData={activeDate} // force re-render on active date change
+            // extraData={activeDate} // force re-render on active date change
             horizontal
             pagingEnabled={scrollerPaging}
             showsHorizontalScrollIndicator={false}
@@ -822,13 +825,10 @@ const CalendarStrip = ({
           <View style={[styles.week, { width: contentWidth }]}>
             {weeks[CENTER_INDEX]?.days.map(day => (
               <CalendarDateItem
-                key={day.dateString}
+                key={day.dateString + (dayjs(day.date).isSame(dayjs(activeDate), 'day') ? '-active' : '')}
                 date={day.date}
                 dateNumber={day.dayOfMonth}
-                dayName={upperCaseDays
-                  ? day.date.format('ddd').toUpperCase()
-                  : day.date.format('ddd')
-                }
+                dayName={upperCaseDays ? day.dayNameUpper : day.dayName}
                 isToday={day.isToday}
                 isActive={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
                 isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
@@ -860,7 +860,7 @@ const CalendarStrip = ({
     </View>
   </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -964,13 +964,14 @@ CalendarStrip.propTypes = {
   calendarRef: PropTypes.oneOfType([
     PropTypes.func,
     PropTypes.shape({ current: PropTypes.any })
-  ])
+  ]),
+  debug: PropTypes.bool,
 };
 
 CalendarStrip.defaultProps = {
-  selectedDate: new Date(),
-  startingDate: new Date(),
-  minDate: undefined,
+  selectedDate: dayjs(),
+  startingDate: dayjs(),
+  minDate: dayjs('2022-01-01'),
   maxDate: undefined,
   useIsoWeekday: false,
   numDaysInWeek: 7,
@@ -1023,7 +1024,8 @@ CalendarStrip.defaultProps = {
   markerComponent: undefined,
 
   // Reference
-  calendarRef: undefined
+  calendarRef: undefined,
+  debug: false,
 };
 
 export default CalendarStrip;
