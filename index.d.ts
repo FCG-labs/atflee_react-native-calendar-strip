@@ -421,13 +421,3 @@ export default CalendarStrip;
 
 
 export { CalendarStrip };
-
-/**
- * Expose V2 optimized component
- */
-export { default as CalendarStripV2 } from './src/components/CalendarStripV2';
-
-/**
- * Props for CalendarStripV2 (same as CalendarStripProps)
- */
-export type CalendarStripV2Props = CalendarStripProps;
