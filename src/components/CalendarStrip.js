@@ -11,13 +11,13 @@ import PropTypes from 'prop-types';
 import {
   View,
   StyleSheet,
-  FlatList,
   Dimensions,
   Platform,
-  LayoutAnimation,
   UIManager,
   InteractionManager
 } from 'react-native';
+// @shopify/flash-list 패키지에서 FlashList 컴포넌트 직접 임포트
+import { FlashList } from '@shopify/flash-list';
 import dayjs from '../dayjs';
 
 
@@ -27,7 +27,15 @@ import dayjs from '../dayjs';
 // Components
 import CalendarHeader from '../CalendarHeader';
 import CalendarDateItem from './CalendarDateItem';
-import logger from '../utils/logger';
+
+/**
+ * @internal
+ * React Native에서는 이미 __DEV__ 가 정의되어 있지만,
+ * 이 모듈이 다른 환경에서도 사용될 수 있도록 개발 환경 확인 로직.
+ * 공개 API와 내부 구현을 분리하기 위한 패턴 적용.
+ */
+// eslint-disable-next-line no-constant-condition
+const isDevEnvironment = true; // 개발환경에서는 항상 true로 설정
 
 
 // Enable LayoutAnimation on Android
@@ -51,7 +59,8 @@ const CalendarStrip = forwardRef(function CalendarStrip({
   scrollable,
   scrollerPaging,
   weekBuffer = 3,
-  useFlashList = true,
+  // useFlashList prop은 더 이상 효과가 없지만 하위 호환성을 위해 유지
+  useFlashList,
   flashListEstimatedItemSize,
   
   // Header configuration
@@ -111,19 +120,36 @@ const CalendarStrip = forwardRef(function CalendarStrip({
   // Shift an entire "buffer" worth of weeks for more aggressive preloading.
   const SHIFT_SIZE = Math.max(1, weekBuffer);
 
-  const ListComponent = useMemo(() => {
-    if (useFlashList) {
-      try {
-        // eslint-disable-next-line global-require
-        return require('@shopify/flash-list').FlashList;
-      } catch (err) {
-        logger.debug('[WARN] FlashList not installed, falling back to FlatList');
-      }
+  // FlashList만 사용하도록 전환 (FlatList 방식은 deprecate)
+  // 하위 호환성을 위해 useFlashList prop은 계속 받지만 항상 FlashList 사용
+  /**
+   * @internal
+   * 공개 API와 내부 구현을 명확하게 분리
+   * 사용자는 useFlashList를 지정할 수 있지만 내부적으로는 항상 FlashList 사용
+   */
+  const ListComponent = FlashList;
+  
+  /**
+   * @internal
+   * FlatList 지원 중단 관련 경고 로직
+   * - 공개 API와 내부 구현을 명확히 분리하기 위해 useFlashList prop은 유지
+   * - 값이 false일 경우에만 개발 환경에서 경고 표시
+   */
+  /**
+   * @deprecated FlatList 지원 중단 알림
+   * 사용자에게 변경사항 안내
+   */
+  useEffect(() => {
+    if (useFlashList === false && isDevEnvironment) {
+      // eslint-disable-next-line no-console
+      console.warn('[CalendarStrip] FlatList 지원이 중단되었습니다. FlashList만 지원됩니다. useFlashList prop은 향후 버전에서 제거될 예정입니다.');
     }
-    return FlatList;
   }, [useFlashList]);
 
-  // FlatList reference
+  /**
+   * @internal
+   * 리스트 컴포넌트 참조 - 내부적으로 FlashList를 사용하지만 변수명은 일관성을 위해 유지
+   */
   const flatListRef = useRef(null);
   // Track whether we've already performed the first centering pass
   const didInitialCenterRef = useRef(false);
@@ -386,7 +412,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     });
 
     queueCompensation(addedCount);
-     return true;
+    return true;
   }, [
     getCachedWeek,
     getWeekStart,
@@ -675,7 +701,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     if (newWidth > 0 && prevWidth > 0 &&
        newWidth !== prevWidth &&
        pendingDeltaRef.current === 0
-     ) {
+    ) {
       const page = prevWidth > 0 ? Math.round(lastOffsetRef.current / prevWidth) : 0;
       const corrected = page * newWidth;
 
@@ -692,7 +718,11 @@ const CalendarStrip = forwardRef(function CalendarStrip({
 
   // Render week
   const renderWeek = useCallback(({ item: week, index }) => {
-    console.log(`[CalendarStrip] renderWeek: index=${index}, start=${week.startDate.format('YYYY-MM-DD')}, end=${week.endDate.format('YYYY-MM-DD')}`);
+    // debug 모드에서만 렌더링 로그 출력
+    if (debug) {
+      // eslint-disable-next-line no-console
+      console.log(`[CalendarStrip] renderWeek: index=${index}, start=${week.startDate.format('YYYY-MM-DD')}, end=${week.endDate.format('YYYY-MM-DD')}`);
+    }
     return (
       <View style={[styles.week, { width: contentWidth }]}>
         {week.days.map(day => (
@@ -757,9 +787,6 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     viewabilityConfigCallbackPairs.current[0].onViewableItemsChanged = onViewableItemsChanged;
   }, [onViewableItemsChanged]);
 
-  // Lightweight logger wrapper – disabled unless `debug` prop is true in dev
-  const log = (__DEV__ && debug) ? logger.debug : () => {};
-
   return (
     
     <View style={[styles.container, style]} onLayout={onLayout}>
@@ -795,17 +822,9 @@ const CalendarStrip = forwardRef(function CalendarStrip({
               onScrollEndDrag={onScrollEnd}
               viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
               initialScrollIndex={CENTER_INDEX}
-              {...(!useFlashList
-                ? {
-                    maintainVisibleContentPosition: {
-                      // keep at least the first half of buffer in view before auto-shift triggers
-                      minIndexForVisible: Math.floor(weekBuffer / 2),
-                    },
-                  }
-                : {})}
-              {...(useFlashList && flashListEstimatedItemSize
-                ? { estimatedItemSize: flashListEstimatedItemSize }
-                : {})}
+              // FlashList 전용 설정 항상 적용
+              // 기본값 제공으로 안정적인 공개 API 유지
+              estimatedItemSize={flashListEstimatedItemSize || 50}
             />
           ) : (
             <View style={[styles.week, { width: contentWidth }]}>
@@ -888,6 +907,10 @@ CalendarStrip.propTypes = {
   scrollable: PropTypes.bool,
   scrollerPaging: PropTypes.bool,
   weekBuffer: PropTypes.number,
+  /**
+   * @deprecated v2.0.0부터 FlashList만 사용됨
+   * 인터페이스 안정성을 위해 유지되지만 어떤 값을 지정해도 항상 FlashList가 사용됨
+   */
   useFlashList: PropTypes.bool,
   flashListEstimatedItemSize: PropTypes.number,
 
@@ -963,6 +986,9 @@ CalendarStrip.defaultProps = {
   scrollable: true,
   scrollerPaging: true,
   weekBuffer: 3,
+  /**
+   * @deprecated v2.0.0부터 FlashList만 사용됨
+   */
   useFlashList: true,
   flashListEstimatedItemSize: undefined,
 
