@@ -35,7 +35,63 @@ npm install atflee_react-native-calendar-strip --save
 yarn add atflee_react-native-calendar-strip
 ```
 
-## 기본 사용법
+## CalendarStripV2 사용법
+
+CalendarStripV2는 성능과 인터페이스 일관성을 개선한 새로운 버전입니다. 표준 React forwardRef 패턴을 사용하여 메서드에 접근합니다:
+
+```jsx
+import React, { useRef } from 'react';
+import { View } from 'react-native';
+import { CalendarStripV2 } from 'atflee_react-native-calendar-strip';
+
+const MyCalendarScreen = () => {
+  // 표준 React ref 패턴 사용
+  const calendarRef = useRef(null);
+  
+  // 날짜 선택 핸들러
+  const handleDateSelected = (date) => {
+    console.log('Selected date:', date.format('YYYY-MM-DD'));
+  };
+  
+  // 제공된 메서드 사용 예시
+  const jumpToToday = () => {
+    if (calendarRef.current) {
+      calendarRef.current.jumpToDate(new Date());
+    }
+  };
+  
+  return (
+    <View style={{ flex: 1 }}>
+      <CalendarStripV2
+        ref={calendarRef}
+        selectedDate={new Date()}
+        onDateSelected={handleDateSelected}
+        scrollable
+        scrollerPaging
+        style={{ height: 100, paddingTop: 20, paddingBottom: 10 }}
+      />
+      
+      {/* 기타 UI 컴포넌트 */}
+    </View>
+  );
+};
+```
+
+### CalendarStripV2 인터페이스 설계 원칙
+
+1. **공개 API와 내부 구현 분리**
+   - ref를 통해서만 공개 메서드에 접근
+   - 내부 상태는 컴포넌트에서 캡슐화
+
+2. **일관된 데이터 접근 패턴**
+   - 날짜 선택 이벤트는 onDateSelected 콜백으로 처리
+   - 날짜 변경은 ref 메서드를 통해 수행
+
+3. **명확한 계약과 책임**
+   - 각 컴포넌트는 특정 기능에만 책임을 가짐
+   - 의존성은 명시적으로 전달
+
+## 기본 사용법 (레거시)
 
 ```jsx
 import React, { useRef, useState } from 'react';

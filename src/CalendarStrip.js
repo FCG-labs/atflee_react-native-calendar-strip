@@ -1,1 +1,1 @@
-export { default } from './components/CalendarStrip';
+export { default } from './components/CalendarStripV2';

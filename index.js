@@ -1,4 +1,6 @@
-const CalendarStrip = require('./src/components/CalendarStrip');
+import CalendarStrip from './src/components/CalendarStrip';
+import CalendarStripV2 from './src/components/CalendarStripV2';
 
-module.exports = CalendarStrip;
-module.exports.CalendarStrip = CalendarStrip;
+export default CalendarStrip;
+export { CalendarStrip };
+export { CalendarStripV2 };

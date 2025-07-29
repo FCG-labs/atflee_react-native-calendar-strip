@@ -334,17 +334,12 @@ export interface CalendarStripProps {
    * Custom marker component renderer
    */
   markerComponent?: (props: { date: Dayjs; dots: any[] }) => ReactNode;
-  
-  // Reference
-  /**
-   * Ref to access calendar methods
-   * @example
-   * const calendarRef = useRef<CalendarStripMethods>(null);
-   * // Later access methods like:
-   * // calendarRef.current?.jumpToDate(date);
-   * // calendarRef.current?.getCurrentWeek();
-   */
-  calendarRef?: RefObject<CalendarStripMethods>;
+
+  // NOTE: We now use standard React ref pattern
+  // Access calendar methods using React ref directly:
+  // const calendarRef = useRef<CalendarStripMethods>(null);
+  // <CalendarStripV2 ref={calendarRef} />
+  // calendarRef.current?.jumpToDate(date);
 }
 
 /**
@@ -425,3 +420,13 @@ export default CalendarStrip;
 
 
 export { CalendarStrip };
+
+/**
+ * Expose V2 optimized component
+ */
+export { default as CalendarStripV2 } from './src/components/CalendarStripV2';
+
+/**
+ * Props for CalendarStripV2 (same as CalendarStripProps)
+ */
+export type CalendarStripV2Props = CalendarStripProps;
