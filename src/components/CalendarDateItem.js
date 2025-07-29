@@ -39,11 +39,12 @@ const CalendarDateItem = memo(({ isActive,
 }) => {
   
   // Cache parsed date for performance
-  const dateObj = dayjs(date);
-  console.log(`[CalendarDateItem] render: date=${dateObj.format('YYYY-MM-DD')} isActive=${isActive}`);
+  const dateObj = useMemo(() => dayjs(date), [date]);
+  // Remove console.log for production - uncomment for debugging only
+  // console.log(`[CalendarDateItem] render: date=${dateObj.format('YYYY-MM-DD')} isActive=${isActive}`);
   const active = isActive;
   // Generate accessibility label for the date
-  const accessibilityLabel = dateObj.format('dddd, MMMM D, YYYY');
+  const accessibilityLabel = useMemo(() => dateObj.format('dddd, MMMM D, YYYY'), [dateObj]);
   
   // --- Detect if this date is marked (memoized) -------------------------
   const hasMarker = useMemo(() => {
@@ -64,7 +65,7 @@ const CalendarDateItem = memo(({ isActive,
   const isStyledWeekend = styleWeekend && isWeekend;
 
   // Determine styles based on active/today state
-  const containerStyle = [
+  const containerStyle = useMemo(() => [
     styles.dateContainer,
     // Merge full active style (including borderRadius)
     ...(active
@@ -74,27 +75,28 @@ const CalendarDateItem = memo(({ isActive,
     ...(calendarColor
       ? [{ backgroundColor: active ? highlightColor : calendarColor }]
       : []),
-  ];
+  ], [active, highlightColor, calendarColor, dayContainerStyle]);
   
-  const dayStyle = [
+  const dayStyle = useMemo(() => [
     styles.dayText,
     dateNameStyle,
     active ? highlightDateNameStyle : null,
     isStyledWeekend && !active ? { color: '#999' } : null,
     isDisabled ? { opacity: disabledDateOpacity } : null
-  ];
+  ], [active, dateNameStyle, highlightDateNameStyle, isDisabled, isStyledWeekend, disabledDateOpacity]);
   
-  const dateStyle = [
+  const dateStyle = useMemo(() => [
     styles.dateText,
     dateNumberStyle,
     active ? highlightDateNumberStyle : null,
     isStyledWeekend && !active ? { color: '#999' } : null,
     isDisabled ? { opacity: disabledDateOpacity } : null
-  ];
+  ], [active, dateNumberStyle, highlightDateNumberStyle, isDisabled, isStyledWeekend, disabledDateOpacity]);
   
   // Use custom day component if provided, otherwise render default
   if (dayComponent) {
-    console.log(`[CalendarDateItem] custom dayComponent render: date=${dateObj.format('YYYY-MM-DD')}`);
+    // Remove console.log for production - uncomment for debugging only
+    // console.log(`[CalendarDateItem] custom dayComponent render: date=${dateObj.format('YYYY-MM-DD')}`);
     return dayComponent({
       date,
       isActive: active,

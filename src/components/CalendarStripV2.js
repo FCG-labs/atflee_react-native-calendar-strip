@@ -106,6 +106,12 @@ const CalendarStripV2 = forwardRef(function CalendarStripV2(
   
   // Generate a week's data starting from a date
   const generateWeek = useCallback((startDate) => {
+    // Check if week is already in cache
+    const cacheKey = dayjs(startDate).format('YYYY-MM-DD');
+    if (weekCacheRef.current.has(cacheKey)) {
+      return weekCacheRef.current.get(cacheKey);
+    }
+    
     const start = dayjs(startDate);
     const today = dayjs();
     const days = [];
@@ -138,12 +144,14 @@ const CalendarStripV2 = forwardRef(function CalendarStripV2(
       });
     }
     
-    return {
-      id: start.format('YYYY-MM-DD'),
-      startDate: start.clone(),
-      endDate: start.add(numDaysInWeek - 1, 'day').clone(),
-      days,
+    // Store week in cache
+    const weekData = { 
+      days, 
+      start: start.toDate(), 
+      end: start.add(numDaysInWeek - 1, 'day').toDate() 
     };
+    weekCacheRef.current.set(cacheKey, weekData);
+    return weekData;
   }, [numDaysInWeek, minDate, maxDate]);
 
   // Get the start date of a week containing the given date
@@ -534,6 +542,12 @@ useImperativeHandle(ref, () => ({
 
 // Render a single week
   const renderWeek = useCallback(({ item: week, index }) => {
+    // Remove console.log for production - uncomment for debugging only
+    // console.log(`[CalendarStrip] renderWeek: index=${index}, start=${dayjs(week.start).format('YYYY-MM-DD')}, end=${dayjs(week.end).format('YYYY-MM-DD')}`);
+    
+    const activeDateEpoch = dayjs(activeDate).valueOf();
+    
+    // Return memoized week component
     return (
       <View style={[styles.week, { width: contentWidth }]}>  
         {week.days.map(day => (
@@ -546,12 +560,12 @@ useImperativeHandle(ref, () => ({
             isToday={day.isToday}
             isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
             isCurrentMonth={day.isCurrentMonth}
-            isActive={day.epoch === dayjs(activeDate).valueOf()}
+            isActive={day.epoch === activeDateEpoch}
           />
         ))}
       </View>
     );
-  }, [commonDateItemProps, upperCaseDays, activeDate]);
+  }, [commonDateItemProps, upperCaseDays, activeDate, contentWidth]);
 
   // Main render
   return (
@@ -577,10 +591,21 @@ useImperativeHandle(ref, () => ({
             horizontal
             pagingEnabled={scrollerPaging}
             showsHorizontalScrollIndicator={false}
-            keyExtractor={(week) => week.id}
+            keyExtractor={(week) => week.start.toISOString()}
             renderItem={renderWeek}
+            // 성능 최적화 설정
+            maxToRenderPerBatch={3}
+            windowSize={5}
+            initialNumToRender={3}
+            removeClippedSubviews={true}
+            getItemLayout={(data, index) => ({
+              length: contentWidth,
+              offset: contentWidth * index,
+              index,
+            })}
+            // 빠른 스크롤 제스처 방지 (iOS)
+            decelerationRate="fast"
             extraData={dayjs(activeDate).valueOf()}
-            getItemLayout={getItemLayout}
             onScrollBeginDrag={handleScrollBeginDrag}
             onScrollEndDrag={handleScrollEndDrag}
             onMomentumScrollEnd={handleMomentumScrollEnd}
