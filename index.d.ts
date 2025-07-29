@@ -422,33 +422,6 @@ declare function CalendarStrip(props: CalendarStripProps): JSX.Element;
 
 export default CalendarStrip;
 
-export class CalendarController {
-  constructor(options?: {
-    initialDate?: Date;
-    useIsoWeekday?: boolean;
-    numDaysInWeek?: number;
-    /**
-     * Number of weeks prepared around the selected date.
-     * @default 3
-     */
-    weekBuffer?: number;
-    minDate?: Date;
-    maxDate?: Date;
-  });
-  addListener(listener: Function): () => void;
-  jumpToDate(date: Date): void;
-  goToNextWeek(): void;
-  goToPreviousWeek(): void;
-  getCurrentWeek(): CalendarWeek | null;
-  getCurrentWeekIndex(): number;
-  getWeeks(): CalendarWeek[];
-  getSelectedDateNative(): Date | null;
-  getSelectedDate(): Dayjs;
-  selectDate(date: Date): void;
-  findWeekIndexByDate(date: Dayjs | Date | string): number;
-}
 
-export function WeekSelector(props: any): JSX.Element;
-export function Scroller(props: any): JSX.Element;
 
 export { CalendarStrip };
