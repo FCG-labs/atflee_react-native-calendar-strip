@@ -335,11 +335,6 @@ export interface CalendarStripProps {
    */
   markerComponent?: (props: { date: Dayjs; dots: any[] }) => ReactNode;
 
-  // NOTE: We now use standard React ref pattern
-  // Access calendar methods using React ref directly:
-  // const calendarRef = useRef<CalendarStripMethods>(null);
-  // <CalendarStripV2 ref={calendarRef} />
-  // calendarRef.current?.jumpToDate(date);
   calendarRef: React.RefObject<CalendarStripMethods>;
 }
 
@@ -352,13 +347,13 @@ export interface CalendarStripMethods {
    * Jump to specific date
    * @param date The date to jump to
    */
-  jumpToDate(date: Dayjs): void;
+  jumpToDate(date: Dayjs | Date | string): void;
   
   /**
    * Scroll to specific date (alias for jumpToDate)
    * @param date The date to scroll to
    */
-  scrollToDate(date: Dayjs): void;
+  scrollToDate(date: Dayjs | Date | string): void;
   
   /**
    * Get the currently selected date

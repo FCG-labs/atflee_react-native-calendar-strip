@@ -20,9 +20,7 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import dayjs from '../dayjs';
 
-
 // Initialize dayjs plugins
-
 
 // Components
 import CalendarHeader from '../CalendarHeader';
@@ -36,7 +34,6 @@ import CalendarDateItem from './CalendarDateItem';
  */
 // eslint-disable-next-line no-constant-condition
 const isDevEnvironment = true; // 개발환경에서는 항상 true로 설정
-
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -176,7 +173,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     
     for (let i = 0; i < numDaysInWeek; i++) {
       const d = start.add(i, 'day');
-      const epoch = d.valueOf();
+      const epoch = d.startOf('day').valueOf(); // normalize to midnight local
       const dayName = d.format('ddd');
       days.push({
         // store lightweight Date object (or epoch) instead of full dayjs instance
@@ -298,9 +295,34 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     return date;
   });
 
-  // Epoch for active date to optimize re-rendering
-  const activeEpoch = useMemo(() => dayjs(activeDate).valueOf(), [activeDate]);
+  // Epoch (start of day) for active date to avoid time-of-day mismatch
+  const activeEpoch = useMemo(() => dayjs(activeDate).startOf('day').valueOf(), [activeDate]);
 
+  const prevActiveEpochRef = useRef(activeEpoch);
+
+  // keep previous active epoch for diffing
+  useEffect(() => {
+    prevActiveEpochRef.current = activeEpoch;
+  }, [activeEpoch]);
+
+  const containsEpoch = (week, epoch) =>
+    week && week.days && week.days.some(d => d.epoch === epoch);
+
+  const shouldWeekUpdate = useCallback(
+    (prevWeek, nextWeek) => {
+      // FlashList passes raw item objects, not {item, index}
+      const nowEpoch = activeEpoch;
+      const prevEpoch = prevActiveEpochRef.current;
+
+      return (
+        containsEpoch(prevWeek, nowEpoch) ||
+        containsEpoch(prevWeek, prevEpoch) ||
+        containsEpoch(nextWeek, nowEpoch) ||
+        containsEpoch(nextWeek, prevEpoch)
+      );
+    },
+    [activeEpoch]
+  );
 
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
   const [leftWidth, setLeftWidth] = useState(0);
@@ -727,7 +749,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
       <View style={[styles.week, { width: contentWidth }]}>
         {week.days.map(day => (
           <CalendarDateItem isActive={day.epoch === activeEpoch}
-            key={`${day.dateString}${day.epoch === activeEpoch ? '-active' : ''}`}
+            key={day.dateString}
             date={day.date}
             dateNumber={day.dayOfMonth}
             dayName={upperCaseDays ? day.dayNameUpper : day.dayName}
@@ -806,7 +828,8 @@ const CalendarStrip = forwardRef(function CalendarStrip({
         
           {scrollable ? (
             <ListComponent
-              extraData={activeEpoch}
+              extraData={activeEpoch} // trigger diff when selected date changes
+              shouldItemUpdate={shouldWeekUpdate} // but re-render only affected weeks
               ref={flatListRef}
               data={weeks}
               renderItem={renderWeek}
@@ -830,7 +853,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
             <View style={[styles.week, { width: contentWidth }]}>
               {weeks[CENTER_INDEX]?.days.map(day => (
                 <CalendarDateItem isActive={day.epoch === activeEpoch}
-                  key={`${day.dateString}${day.epoch === activeEpoch ? '-active' : ''}`}
+                  key={day.dateString}
                   date={day.date}
                   dateNumber={day.dayOfMonth}
                   dayName={upperCaseDays ? day.dayNameUpper : day.dayName}

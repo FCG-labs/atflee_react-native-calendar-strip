@@ -106,11 +106,13 @@ const CalendarDateItem = memo(({ isActive,
     // console.log(`[CalendarDateItem] custom dayComponent render: date=${dateObj.format('YYYY-MM-DD')}`);
     return dayComponent({
       date,
+      dayName,
+      dateNumber,
       isActive: active,
       isToday,
       isWeekend,
       isDisabled,
-      markedDate: hasMarker,
+      isMarked: hasMarker,
       onDateSelected: handlePress,
     });
   }
