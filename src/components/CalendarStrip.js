@@ -234,6 +234,11 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     return initCarousel();
   });
 
+  // Helper to refresh FlatList without regenerating weeks
+  const refreshWeeks = useCallback(() => {
+    setWeeks(prev => prev.slice());
+  }, []);
+
   useEffect(() => {
     if (isShiftingRef.current) {
       // Ignore interim week array changes triggered by shift; the correct week
@@ -281,20 +286,20 @@ const CalendarStrip = forwardRef(function CalendarStrip({
 
   // Handle selectedDate changes
   useEffect(() => {
-    
+
     if (selectedDate && !dayjs(selectedDate).isSame(dayjs(activeDate), 'day')) {
       setActiveDate(selectedDate);
-      
+
       // Check if selectedDate is in current window
       const targetWeekStart = getWeekStart(selectedDate);
-      
+
       const isInWindow = weeks.some(week => {
         const weekStart = getWeekStart(week.startDate);
         const match = weekStart.isSame(targetWeekStart, 'day');
         return match;
       });
-      
-      
+
+
       if (!isInWindow) {
         didInitialCenterRef.current = false; // allow next layout effect to recenter
         const newWeeks = initCarousel();
@@ -302,19 +307,22 @@ const CalendarStrip = forwardRef(function CalendarStrip({
         // Ensure re-center after new data applied (next frame)
         InteractionManager.runAfterInteractions(reCenter);
 
-      } else if (scrollable) {
-        // Selected date is already in the week buffer – scroll to its week so it becomes visible.
-        const targetIdx = weeks.findIndex(week =>
-          getWeekStart(week.startDate).isSame(targetWeekStart, 'day')
-        );
-        if (targetIdx !== -1) {
-          requestAnimationFrame(() => {
-            flatListRef.current?.scrollToIndex({ index: targetIdx, animated: scrollerPaging });
-          });
+      } else {
+        refreshWeeks();
+        if (scrollable) {
+          // Selected date is already in the week buffer – scroll to its week so it becomes visible.
+          const targetIdx = weeks.findIndex(week =>
+            getWeekStart(week.startDate).isSame(targetWeekStart, 'day')
+          );
+          if (targetIdx !== -1) {
+            requestAnimationFrame(() => {
+              flatListRef.current?.scrollToIndex({ index: targetIdx, animated: scrollerPaging });
+            });
+          }
         }
       }
     }
-  }, [selectedDate, activeDate, weeks, getWeekStart, initCarousel, reCenter, scrollable, scrollerPaging]);
+  }, [selectedDate, activeDate, weeks, getWeekStart, initCarousel, reCenter, scrollable, scrollerPaging, refreshWeeks]);
 
   // Initial centering once layout is calculated
   useLayoutEffect(() => {
@@ -606,6 +614,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
         if (centerWeek) {
           const nextWeekStart = getWeekStart(centerWeek.startDate).add(numDaysInWeek, 'day');
           setActiveDate(nextWeekStart.toDate());
+          refreshWeeks();
         }
       },
       goToPreviousWeek: () => {
@@ -613,6 +622,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
         if (centerWeek) {
           const prevWeekStart = getWeekStart(centerWeek.startDate).subtract(numDaysInWeek, 'day');
           setActiveDate(prevWeekStart.toDate());
+          refreshWeeks();
         }
       },
       getCurrentWeek: () => weeks[CENTER_INDEX] || null,
@@ -633,11 +643,12 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     }
 
     setActiveDate(dateObj);
+    refreshWeeks();
 
     if (onDateSelected) {
       onDateSelected(dateObj);
     }
-  }, [onDateSelected, minDate, maxDate]);
+  }, [onDateSelected, minDate, maxDate, refreshWeeks]);
 
   // Layout handlers
   const onLayout = useCallback(event => {
