@@ -340,6 +340,7 @@ export interface CalendarStripProps {
   // const calendarRef = useRef<CalendarStripMethods>(null);
   // <CalendarStripV2 ref={calendarRef} />
   // calendarRef.current?.jumpToDate(date);
+  calendarRef: React.RefObject<CalendarStripMethods>;
 }
 
 /**
