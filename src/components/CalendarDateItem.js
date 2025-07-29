@@ -1,7 +1,8 @@
-import React, { memo } from 'react';
+import React, { memo, useContext } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import PropTypes from 'prop-types';
 import dayjs from 'dayjs';
+import ActiveDateContext from '../ActiveDateContext';
 
 /**
  * CalendarDateItem component
@@ -12,7 +13,6 @@ const CalendarDateItem = memo(({
   date,
   dateNumber,
   dayName,
-  isActive,
   isToday,
   isWeekend,
   showDayName,
@@ -32,12 +32,13 @@ const CalendarDateItem = memo(({
   markedDatesStyle,
   markerComponent,
   dayContainerStyle,
-  activeDate,
   highlightColor,
   calendarColor,
   styleWeekend,
   isDisabled
 }) => {
+  const contextActiveDate = useContext(ActiveDateContext);
+  const active = dayjs(date).isSame(dayjs(contextActiveDate), 'day');
   // Generate accessibility label for the date
   const accessibilityLabel = dayjs(date).format('dddd, MMMM D, YYYY');
   
@@ -59,26 +60,26 @@ const CalendarDateItem = memo(({
   // Determine styles based on active/today state
   const containerStyle = [
     styles.dateContainer,
-    isActive ? {
+    active ? {
       backgroundColor: highlightColor || styles.activeDate.backgroundColor
     } : null,
     dayContainerStyle,
-    calendarColor ? { backgroundColor: isActive ? highlightColor : calendarColor } : null
+    calendarColor ? { backgroundColor: active ? highlightColor : calendarColor } : null
   ];
   
   const dayStyle = [
     styles.dayText,
     dateNameStyle,
-    isActive ? highlightDateNameStyle : null,
-    isStyledWeekend && !isActive ? { color: '#999' } : null,
+    active ? highlightDateNameStyle : null,
+    isStyledWeekend && !active ? { color: '#999' } : null,
     isDisabled ? { opacity: disabledDateOpacity } : null
   ];
   
   const dateStyle = [
     styles.dateText,
     dateNumberStyle,
-    isActive ? highlightDateNumberStyle : null,
-    isStyledWeekend && !isActive ? { color: '#999' } : null,
+    active ? highlightDateNumberStyle : null,
+    isStyledWeekend && !active ? { color: '#999' } : null,
     isDisabled ? { opacity: disabledDateOpacity } : null
   ];
   
@@ -86,7 +87,7 @@ const CalendarDateItem = memo(({
   if (dayComponent) {
     return dayComponent({
       date,
-      isActive,
+      isActive: active,
       isToday,
       isWeekend,
       isDisabled,
@@ -200,7 +201,6 @@ CalendarDateItem.propTypes = {
   date: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.object]).isRequired,
   dateNumber: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   dayName: PropTypes.string.isRequired,
-  isActive: PropTypes.bool,
   isToday: PropTypes.bool,
   isWeekend: PropTypes.bool,
   showDayName: PropTypes.bool,
@@ -221,7 +221,6 @@ CalendarDateItem.propTypes = {
   markedDatesStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   markerComponent: PropTypes.func,
   dayContainerStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  activeDate: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.object]),
   highlightColor: PropTypes.string,
   calendarColor: PropTypes.string,
   styleWeekend: PropTypes.bool,
@@ -229,7 +228,6 @@ CalendarDateItem.propTypes = {
 };
 
 CalendarDateItem.defaultProps = {
-  isActive: false,
   isToday: false,
   isWeekend: false,
   showDayName: true,
