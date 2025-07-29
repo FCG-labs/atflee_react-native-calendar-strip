@@ -28,6 +28,7 @@ dayjs.extend(isoWeek);
 import CalendarHeader from '../CalendarHeader';
 import CalendarDateItem from './CalendarDateItem';
 import logger from '../utils/logger';
+import ActiveDateContext from '../ActiveDateContext';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -695,7 +696,6 @@ const CalendarStrip = forwardRef(function CalendarStrip({
             dateNumber={day.dayOfMonth}
             dayName={upperCaseDays ? day.dayNameUpper : day.dayName}
             isToday={day.isToday}
-            isActive={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
             isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
             isCurrentMonth={day.isCurrentMonth}
             onDateSelected={() => handleDateSelection(day.date)}
@@ -755,6 +755,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
   const log = (__DEV__ && debug) ? logger.debug : () => {};
 
   return (
+    <ActiveDateContext.Provider value={activeDate}>
     <View style={[styles.container, style]} onLayout={onLayout}>
       <View style={[styles.inner, innerStyle]}>
         {showMonth && (
@@ -808,7 +809,6 @@ const CalendarStrip = forwardRef(function CalendarStrip({
                 dateNumber={day.dayOfMonth}
                 dayName={upperCaseDays ? day.dayNameUpper : day.dayName}
                 isToday={day.isToday}
-                isActive={dayjs(day.date).isSame(dayjs(activeDate), 'day')}
                 isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
                 isCurrentMonth={day.isCurrentMonth}
                 onDateSelected={() => handleDateSelection(day.date)}
@@ -836,7 +836,9 @@ const CalendarStrip = forwardRef(function CalendarStrip({
         <View onLayout={onRightLayout}>{rightSelector}</View>
       </View>
     </View>
-  </View>
+    </View>
+    </View>
+    </ActiveDateContext.Provider>
   );
 });
 
