@@ -48,7 +48,7 @@ const CalendarStrip = ({
   scrollable,
   scrollerPaging,
   weekBuffer = 3,
-  useFlashList = false,
+  useFlashList = true,
   flashListEstimatedItemSize,
   
   // Header configuration
@@ -104,6 +104,10 @@ const CalendarStrip = ({
   const WINDOW_SIZE = scrollable ? weekBuffer * 2 + 1 : 1;
   const CENTER_INDEX = scrollable ? weekBuffer : 0;
 
+  // Number of weeks to add/remove when user reaches either end of the window.
+  // Shift an entire "buffer" worth of weeks for more aggressive preloading.
+  const SHIFT_SIZE = Math.max(1, weekBuffer);
+
   const ListComponent = useMemo(() => {
     if (useFlashList) {
       try {
@@ -118,10 +122,19 @@ const CalendarStrip = ({
 
   // FlatList reference
   const flatListRef = useRef(null);
+  // Track whether we've already performed the first centering pass
+  const didInitialCenterRef = useRef(false);
   // Track the currently visible week to avoid redundant callbacks
   const currentWeekRef = useRef('');
   // Skip onWeekChanged on initial render
   const skipInitialRef = useRef(true);
+
+  // Helper to programmatically re-center the list to CENTER_INDEX
+  const reCenter = useCallback(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToIndex({ index: CENTER_INDEX, animated: scrollerPaging });
+    }
+  }, [scrollerPaging, CENTER_INDEX]);
 
   // Cache previously generated weeks to avoid regeneration when buffer is large
   const weekCacheRef = useRef(new Map());
@@ -221,6 +234,11 @@ const CalendarStrip = ({
   });
 
   useEffect(() => {
+    if (isShiftingRef.current) {
+      // Ignore interim week array changes triggered by shift; the correct week
+      // will be emitted via onViewableItemsChanged after scrolling settles.
+      return;
+    }
     const centerWeek = weeks[CENTER_INDEX];
 
     if (centerWeek) {
@@ -289,21 +307,32 @@ const CalendarStrip = ({
       
       if (!isInWindow) {
         logger.debug('[EFFECT] Rebuilding carousel around selected date');
+        didInitialCenterRef.current = false; // allow next layout effect to recenter
         const newWeeks = initCarousel();
         setWeeks(newWeeks);
+        // Ensure re-center after new data applied (next frame)
+        InteractionManager.runAfterInteractions(reCenter);
+
+      } else if (scrollable) {
+        // Selected date is already in the week buffer – scroll to its week so it becomes visible.
+        const targetIdx = weeks.findIndex(week =>
+          getWeekStart(week.startDate).isSame(targetWeekStart, 'day')
+        );
+        if (targetIdx !== -1) {
+          logger.debug('[EFFECT] Scrolling to existing week index:', targetIdx);
+          requestAnimationFrame(() => {
+            flatListRef.current?.scrollToIndex({ index: targetIdx, animated: scrollerPaging });
+          });
+        }
       }
-      
-      // Recenter will occur via layout effect
     }
-  }, [selectedDate, activeDate, weeks, getWeekStart, initCarousel]);
+  }, [selectedDate, activeDate, weeks, getWeekStart, initCarousel, reCenter, scrollable, scrollerPaging]);
 
   // Initial centering once layout is calculated
   useLayoutEffect(() => {
-    if (scrollerPaging && flatListRef.current) {
-      flatListRef.current.scrollToIndex({
-        index: CENTER_INDEX,
-        animated: scrollerPaging,
-      });
+    if (!didInitialCenterRef.current && scrollerPaging) {
+      reCenter();
+      didInitialCenterRef.current = true;
     }
 
     if (onRenderComplete && startTimeRef.current) {
@@ -313,11 +342,15 @@ const CalendarStrip = ({
           : Date.now();
       onRenderComplete(end - startTimeRef.current);
     }
-  }, [weeks, viewWidth, scrollerPaging, onRenderComplete]);
+  }, [viewWidth, scrollerPaging, onRenderComplete]);
 
   // True Carousel: Real-time scroll threshold detection
   const isShiftingRef = useRef(false);
   const pendingShiftRef = useRef([]);
+  const lastOffsetRef = useRef(0);
+  // Latest usable content width (excludes selectors) and pending compensation
+  const contentWidthRef = useRef(0);
+  const pendingDeltaRef = useRef(0);
   
   const shiftLeft = useCallback(() => {
     if (isShiftingRef.current) {
@@ -326,26 +359,35 @@ const CalendarStrip = ({
     }
     isShiftingRef.current = true;
 
-    let shifted = false;
+    let addedCount = 0;
     setWeeks(currentWeeks => {
-      const firstWeek = currentWeeks[0];
-      const prevWeekStart = getWeekStart(firstWeek.startDate).subtract(numDaysInWeek, 'day');
-      const prevWeekEnd = dayjs(prevWeekStart).add(numDaysInWeek - 1, 'day');
+      let weeksToAdd = [];
+      let cursorStart = getWeekStart(currentWeeks[0].startDate);
 
-      if (minDate && prevWeekEnd.isBefore(dayjs(minDate), 'day')) {
-        return currentWeeks;
+      for (let i = 0; i < SHIFT_SIZE; i++) {
+        const candidateStart = cursorStart.subtract(numDaysInWeek, 'day');
+        const candidateEnd = candidateStart.add(numDaysInWeek - 1, 'day');
+
+        if (minDate && candidateEnd.isBefore(dayjs(minDate), 'day')) {
+          break; // stop at boundary
+        }
+
+        weeksToAdd.push(getCachedWeek(candidateStart));
+        cursorStart = candidateStart;
+        addedCount += 1;
       }
 
-      shifted = true;
-      const newWeek = getCachedWeek(prevWeekStart);
-      return [newWeek, ...currentWeeks.slice(0, WINDOW_SIZE - 1)];
+      if (addedCount === 0) {
+        return currentWeeks; // nothing added
+      }
+
+      weeksToAdd.reverse(); // maintain chronological order
+      return [...weeksToAdd, ...currentWeeks.slice(0, WINDOW_SIZE - addedCount)];
     });
 
-    InteractionManager.runAfterInteractions(() => {
-      flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
-    });
-
-    return shifted;
+    logger.debug('[SHIFT] shiftLeft addedCount:', addedCount);
+    queueCompensation(addedCount);
+     return true;
   }, [
     getCachedWeek,
     getWeekStart,
@@ -353,6 +395,8 @@ const CalendarStrip = ({
     minDate,
     WINDOW_SIZE,
     weekBuffer,
+    SHIFT_SIZE,
+    queueCompensation,
   ]);
 
   const shiftRight = useCallback(() => {
@@ -362,25 +406,34 @@ const CalendarStrip = ({
     }
     isShiftingRef.current = true;
 
-    let shifted = false;
+    let addedCount = 0;
     setWeeks(currentWeeks => {
-      const lastWeek = currentWeeks[currentWeeks.length - 1];
-      const nextWeekStart = getWeekStart(lastWeek.startDate).add(numDaysInWeek, 'day');
+      let weeksToAdd = [];
+      let cursorStart = getWeekStart(currentWeeks[currentWeeks.length - 1].startDate);
 
-      if (maxDate && dayjs(nextWeekStart).isAfter(dayjs(maxDate), 'day')) {
+      for (let i = 0; i < SHIFT_SIZE; i++) {
+        const candidateStart = cursorStart.add(numDaysInWeek, 'day');
+
+        if (maxDate && dayjs(candidateStart).isAfter(dayjs(maxDate), 'day')) {
+          break; // boundary hit
+        }
+
+        weeksToAdd.push(getCachedWeek(candidateStart));
+        cursorStart = candidateStart;
+        addedCount += 1;
+      }
+
+      if (addedCount === 0) {
         return currentWeeks;
       }
 
-      shifted = true;
-      const newWeek = getCachedWeek(nextWeekStart);
-      return [...currentWeeks.slice(1), newWeek];
+      return [...currentWeeks.slice(addedCount), ...weeksToAdd];
     });
 
-    InteractionManager.runAfterInteractions(() => {
-      flatListRef.current?.scrollToIndex({ index: CENTER_INDEX, animated: false });
-    });
-
-    return shifted;
+    logger.debug('[SHIFT] shiftRight addedCount:', addedCount);
+    queueCompensation(-addedCount);
+    // isShiftingRef will be cleared inside rAF
+    return true;
   }, [
     getCachedWeek,
     getWeekStart,
@@ -388,56 +441,137 @@ const CalendarStrip = ({
     maxDate,
     WINDOW_SIZE,
     weekBuffer,
+    SHIFT_SIZE,
+    queueCompensation,
   ]);
+
+  // Edge detection for rubber-band overscroll
+  const edgeShiftHandledRef = useRef(false);
+  const EDGE_THRESHOLD = 0.6;        // 60 % of item width
+  const EDGE_DEBOUNCE_MS = 120;      // debounce to avoid rapid loops
+  const lastEdgeShiftTsRef = useRef(0);
 
   const onScrollEnd = useCallback(
     (event) => {
-      const currentOffset = event.nativeEvent.contentOffset.x;
-      const itemWidth = contentWidth;
-      const page = Math.round(itemWidth ? currentOffset / itemWidth : 1);
-      logger.debug('[CAROUSEL] Scroll end page:', page, 'offset:', currentOffset);
+      const rawX = event.nativeEvent.contentOffset.x;
+      const w = contentWidthRef.current;
+      if (!w) return;
 
+      const maxX = (WINDOW_SIZE - 1) * w;
+
+      // Determine which logical page we're on.
+      let page;
+      if (rawX < 0) {
+        page = 0;
+      } else if (rawX > maxX) {
+        page = WINDOW_SIZE - 1;
+      } else {
+        page = Math.floor((rawX + w / 2) / w);
+      }
+
+      const snappedOffset = page * w;
+      lastOffsetRef.current = snappedOffset;
+
+      // Reset edge guard when back in the middle
+      if (page === CENTER_INDEX) {
+        edgeShiftHandledRef.current = false;
+      }
+
+      logger.debug(
+        '[CAROUSEL] Scroll end page:', page,
+        'rawX:', rawX,
+        'snapped:', snappedOffset,
+        'isShifting:', isShiftingRef.current,
+      );
+
+      // If a shift animation is still in progress, flush pending queue.
       if (isShiftingRef.current) {
         if (page === CENTER_INDEX) {
           isShiftingRef.current = false;
           const next = pendingShiftRef.current.shift();
-          if (next === 'left') {
-            shiftLeft();
-          } else if (next === 'right') {
-            shiftRight();
-          }
+          if (next === 'left') shiftLeft();
+          else if (next === 'right') shiftRight();
         }
         return;
       }
 
+      // Edge shift – allow only once until user scrolls back into window
       if (page === 0) {
-        shiftLeft();
+        if (!edgeShiftHandledRef.current) {
+          edgeShiftHandledRef.current = true;
+          shiftLeft();
+        }
       } else if (page === WINDOW_SIZE - 1) {
-        shiftRight();
+        if (!edgeShiftHandledRef.current) {
+          edgeShiftHandledRef.current = true;
+          shiftRight();
+        }
       }
     },
-    [contentWidth, shiftLeft, shiftRight]
+    [WINDOW_SIZE, shiftLeft, shiftRight],
   );
 
-  
-  // Determine the logical "center" week based on visible items
+  // Live scroll offset logger
+  const onScroll = useCallback(event => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    lastOffsetRef.current = offsetX; // keep ref in sync
+    logger.debug('[SCROLL] offsetX:', offsetX);
+  }, []);
+
+  // flush pending compensation using latest width
+  const flushCompensation = useCallback(() => {
+    const k = pendingDeltaRef.current;
+    if (!k) return;
+    pendingDeltaRef.current = 0;
+
+    logger.debug('[COMP] flush start k:', k, 'lastOffset:', lastOffsetRef.current, 'width:', contentWidthRef.current);
+    const w = contentWidthRef.current;
+    if (w <= 0) return;
+
+    const maxOffset = (WINDOW_SIZE - 1) * w;
+    let newOffset = lastOffsetRef.current + k * w;
+    newOffset = Math.round(newOffset / w) * w;
+    newOffset = Math.max(0, Math.min(newOffset, maxOffset));
+
+    lastOffsetRef.current = newOffset;
+    logger.debug('[COMP] flush applied newOffset:', newOffset);
+    flatListRef.current?.scrollToOffset({ offset: newOffset, animated: false });
+    isShiftingRef.current = false;
+  }, [WINDOW_SIZE]);
+
+  // queue compensation and ensure a flush next frame
+  const queueCompensation = useCallback((deltaK) => {
+    if (deltaK === 0) return;
+    pendingDeltaRef.current += deltaK;
+    logger.debug('[COMP] queue deltaK:', deltaK, 'pendingDelta now:', pendingDeltaRef.current);
+    requestAnimationFrame(flushCompensation);
+  }, [flushCompensation]);
+
   const onViewableItemsChanged = useCallback(({ viewableItems }) => {
     if (!viewableItems || viewableItems.length === 0) {
       return;
     }
 
-    // Pick the index that is closest to the middle of the viewport.
-    // Assumption: items array already sorted by their position.
-    const visibleIndices = viewableItems
-      .map(v => v.index)
-      .filter(i => typeof i === 'number');
+    // Compute the item whose center is nearest to viewport center
+    // Viewport center X in list coordinates
+    const viewportCenterX = lastOffsetRef.current + contentWidthRef.current / 2;
 
-    if (visibleIndices.length === 0) return;
+    let closestIdx = null;
+    let minDistance = Number.MAX_VALUE;
 
-    // Choose the median index as an approximation of the centered item
-    visibleIndices.sort((a, b) => a - b);
-    const medianIdx = visibleIndices[Math.floor(visibleIndices.length / 2)];
-    const centerWeek = weeks[medianIdx];
+    viewableItems.forEach(v => {
+      if (typeof v.index !== 'number') return;
+      const itemCenterX = (v.index + 0.5) * contentWidthRef.current;
+      const dist = Math.abs(itemCenterX - viewportCenterX);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestIdx = v.index;
+      }
+    });
+
+    if (closestIdx == null) return;
+
+    const centerWeek = weeks[closestIdx];
 
     if (!centerWeek) return;
 
@@ -463,7 +597,7 @@ const CalendarStrip = ({
 
       currentWeekRef.current = weekKey;
     }
-  }, [weeks, numDaysInWeek, onWeekChanged, updateMonthYear]);
+  }, [weeks, numDaysInWeek, onWeekChanged, updateMonthYear, contentWidthRef]);
 
   // Imperative methods
   React.useImperativeHandle(calendarRef, () => {
@@ -471,8 +605,11 @@ const CalendarStrip = ({
       setActiveDate(date);
 
       // Rebuild carousel around new date
+      didInitialCenterRef.current = false; // allow next layout effect to recenter
       const newWeeks = initCarousel();
       setWeeks(newWeeks);
+      // Ensure re-center after new data applied (next frame)
+      InteractionManager.runAfterInteractions(reCenter);
 
     };
 
@@ -531,13 +668,43 @@ const CalendarStrip = ({
 
   const onLeftLayout = useCallback(e => {
     setLeftWidth(e.nativeEvent.layout.width);
-  }, []);
+    requestAnimationFrame(flushCompensation);
+  }, [flushCompensation]);
 
   const onRightLayout = useCallback(e => {
     setRightWidth(e.nativeEvent.layout.width);
-  }, []);
+    requestAnimationFrame(flushCompensation);
+  }, [flushCompensation]);
 
   const contentWidth = Math.max(viewWidth - leftWidth - rightWidth, 0);
+
+  const prevContentWidthRef = useRef(0);
+
+  // keep width ref updated and fix offset drift when width changes
+  useEffect(() => {
+    contentWidthRef.current = contentWidth;
+
+    const newWidth = contentWidth;
+    const prevWidth = prevContentWidthRef.current;
+
+    if (newWidth > 0 && prevWidth > 0 &&
+       newWidth !== prevWidth &&
+       pendingDeltaRef.current === 0
+     ) {
+      logger.debug('[WIDTH] change prev->new:', prevWidth, '->', newWidth, 'lastOffset:', lastOffsetRef.current);
+      const page = prevWidth > 0 ? Math.round(lastOffsetRef.current / prevWidth) : 0;
+      const corrected = page * newWidth;
+
+      if (Math.abs(corrected - lastOffsetRef.current) > 1) {
+        lastOffsetRef.current = corrected;
+        requestAnimationFrame(() => {
+          flatListRef.current?.scrollToOffset({ offset: corrected, animated: false });
+        });
+      }
+
+      prevContentWidthRef.current = newWidth;
+    }
+  }, [contentWidth]);
 
   // Render week
   const renderWeek = useCallback(({ item: week }) => {
@@ -628,14 +795,25 @@ const CalendarStrip = ({
             data={weeks}
             renderItem={renderWeek}
             keyExtractor={keyExtractor}
+            extraData={activeDate} // force re-render on active date change
             horizontal
             pagingEnabled={scrollerPaging}
             showsHorizontalScrollIndicator={false}
             getItemLayout={getItemLayout}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
             onMomentumScrollEnd={onScrollEnd}
             onScrollEndDrag={onScrollEnd}
             viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
             initialScrollIndex={CENTER_INDEX}
+            {...(!useFlashList
+              ? {
+                  maintainVisibleContentPosition: {
+                    // keep at least the first half of buffer in view before auto-shift triggers
+                    minIndexForVisible: Math.floor(weekBuffer / 2),
+                  },
+                }
+              : {})}
             {...(useFlashList && flashListEstimatedItemSize
               ? { estimatedItemSize: flashListEstimatedItemSize }
               : {})}
@@ -799,7 +977,7 @@ CalendarStrip.defaultProps = {
   scrollable: true,
   scrollerPaging: true,
   weekBuffer: 3,
-  useFlashList: false,
+  useFlashList: true,
   flashListEstimatedItemSize: undefined,
 
   // Header configuration defaults

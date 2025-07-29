@@ -1,0 +1,50 @@
+@startuml
+skinparam handwritten false
+skinparam classAttributeIconSize 0
+
+' ───────────────── UI COMPONENTS ─────────────────
+class CalendarStrip <<Component>> {
+  +props
+  --
+  viewWidth        : number
+  contentWidth     : number
+  weeks            : Week[]
+  activeDate       : Date
+  isShiftingRef    : Ref<boolean>
+  pendingShiftRef  : Ref<string[]>     ' "left" | "right"
+  lastOffsetRef    : Ref<number>
+  --
+  +shiftLeft()  : boolean
+  +shiftRight() : boolean
+  +onScrollEnd(evt)
+  +onViewableItemsChanged(list)
+  +handleDateSelection(date)
+}
+
+class CalendarHeader <<Component>>
+class WeekRow        <<Component>>
+class WeekDay        <<Component>>
+
+CalendarStrip "1" *-- "1" CalendarHeader
+CalendarStrip "1" *-- "*" WeekRow
+WeekRow      "1" *-- "7" WeekDay
+
+' ───────────────── DATA MODEL ─────────────────
+class Week {
+  startDate : Date
+  endDate   : Date
+}
+
+class WeekCache <<Map>>
+
+CalendarStrip o-- WeekCache : cache
+
+' ───────────────── UTILITIES ─────────────────
+class useWeekCache <<Hook>>
+class getWeekStart <<Function>>
+
+useWeekCache ..> WeekCache
+CalendarStrip ..> useWeekCache
+CalendarStrip ..> getWeekStart
+
+@enduml
