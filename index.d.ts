@@ -10,8 +10,8 @@ import {
  * Single day data structure as returned by CalendarController
  */
 export interface CalendarDay {
-  /** Dayjs object for this day */
-  date: Dayjs;
+  /** Date object for this day */
+  date: Date;
   /** String representation of date in YYYY-MM-DD format */
   dateString: string;
   /** Day of week (0-6, 0 is Sunday) */
@@ -47,9 +47,9 @@ export interface CalendarWeek {
  */
 export interface IDayComponentProps {
   /**
-   * The dayjs date object for this day
+   * The JavaScript Date object for this day
    */
-  date: Dayjs;
+  date: Date;
   
   /**
    * Whether this date is currently selected
@@ -78,9 +78,9 @@ export interface IDayComponentProps {
   
   /**
    * Callback to select this date
-   * @param date The selected dayjs date
+   * @param date The selected JavaScript Date
    */
-  onDateSelected: (date: Dayjs) => void;
+  onDateSelected: (date: Date) => void;
 }
 
 /**
@@ -95,8 +95,8 @@ export interface DateRange {
  * Marker date format used in the markedDates array
  */
 export interface MarkedDate {
-  /** Date to mark - can be Dayjs object, or date string */
-  date: Dayjs | string;
+  /** Date to mark - can be Dayjs object, JavaScript Date, or date string */
+  date: Dayjs | Date | string;
   /** Optional dots to display for the marker */
   dots?: Array<{color?: string; [key: string]: any}>;
   /** Any additional custom properties */
@@ -109,24 +109,24 @@ export interface MarkedDate {
 export interface CalendarStripProps {
   // Calendar configuration
   /**
-   * Initial selected date
+   * Initial selected date (Dayjs, JavaScript Date, or date string)
    */
-  selectedDate?: Dayjs;
+  selectedDate?: Dayjs | Date | string;
   
   /**
-   * Date to start the calendar at
+   * Date to start the calendar at (Dayjs, JavaScript Date, or date string)
    */
-  startingDate?: Dayjs;
+  startingDate?: Dayjs | Date | string;
   
   /**
-   * Minimum selectable date
+   * Minimum selectable date (Dayjs, JavaScript Date, or date string)
    */
-  minDate?: Dayjs;
+  minDate?: Dayjs | Date | string;
   
   /**
-   * Maximum selectable date
+   * Maximum selectable date (Dayjs, JavaScript Date, or date string)
    */
-  maxDate?: Dayjs;
+  maxDate?: Dayjs | Date | string;
   
   /**
    * Use ISO weekday (Monday as first day)

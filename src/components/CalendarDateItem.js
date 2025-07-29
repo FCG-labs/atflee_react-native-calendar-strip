@@ -1,15 +1,15 @@
-import React, { memo, useContext } from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import PropTypes from 'prop-types';
-import dayjs from 'dayjs';
-import ActiveDateContext from '../ActiveDateContext';
+import dayjs from '../dayjs';
+
 
 /**
  * CalendarDateItem component
  * Renders a single date item in the calendar strip
  * Optimized with React.memo to prevent unnecessary re-renders
  */
-const CalendarDateItem = memo(({ 
+const CalendarDateItem = memo(({ isActive, 
   date,
   dateNumber,
   dayName,
@@ -37,22 +37,27 @@ const CalendarDateItem = memo(({
   styleWeekend,
   isDisabled
 }) => {
-  const contextActiveDate = useContext(ActiveDateContext);
-  const active = dayjs(date).isSame(dayjs(contextActiveDate), 'day');
-  // Generate accessibility label for the date
-  const accessibilityLabel = dayjs(date).format('dddd, MMMM D, YYYY');
   
-  // --- Detect if this date is marked -------------------------
-  const hasMarker = markedDates && markedDates.find(m => {
-    // Accept raw string/Date/Dayjs, or object with `.date`
-    let d;
-    if (typeof m === 'string' || m instanceof Date || dayjs.isDayjs(m)) {
-      d = m;
-    } else if (m && 'date' in m) {
-      d = m.date;
-    }
-    return d ? dayjs(d).isSame(dayjs(date), 'day') : false;
-  });
+  // Cache parsed date for performance
+  const dateObj = dayjs(date);
+  const active = isActive;
+  // Generate accessibility label for the date
+  const accessibilityLabel = dateObj.format('dddd, MMMM D, YYYY');
+  
+  // --- Detect if this date is marked (memoized) -------------------------
+  const hasMarker = useMemo(() => {
+    if (!markedDates) return null;
+    return markedDates.find(m => {
+      // Accept raw string/Date/Dayjs, or object with `.date`
+      let d;
+      if (typeof m === 'string' || m instanceof Date || dayjs.isDayjs(m)) {
+        d = m;
+      } else if (m && 'date' in m) {
+        d = m.date;
+      }
+      return d ? dayjs(d).isSame(dateObj, 'day') : false;
+    });
+  }, [markedDates, dateObj]);
   
   // Apply custom styling for weekend if enabled
   const isStyledWeekend = styleWeekend && isWeekend;
@@ -60,11 +65,14 @@ const CalendarDateItem = memo(({
   // Determine styles based on active/today state
   const containerStyle = [
     styles.dateContainer,
-    active ? {
-      backgroundColor: highlightColor || styles.activeDate.backgroundColor
-    } : null,
+    // Merge full active style (including borderRadius)
+    ...(active
+      ? [styles.activeDate, { backgroundColor: highlightColor || styles.activeDate.backgroundColor }]
+      : []),
     dayContainerStyle,
-    calendarColor ? { backgroundColor: active ? highlightColor : calendarColor } : null
+    ...(calendarColor
+      ? [{ backgroundColor: active ? highlightColor : calendarColor }]
+      : []),
   ];
   
   const dayStyle = [
@@ -197,8 +205,8 @@ const styles = StyleSheet.create({
 });
 
 CalendarDateItem.propTypes = {
-  // Accept JavaScript Date or dayjs object
-  date: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.object]).isRequired,
+  // Accept JavaScript Date, dayjs object, or ISO date string
+  date: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.object, PropTypes.string]).isRequired,
   dateNumber: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   dayName: PropTypes.string.isRequired,
   isToday: PropTypes.bool,
@@ -224,7 +232,8 @@ CalendarDateItem.propTypes = {
   highlightColor: PropTypes.string,
   calendarColor: PropTypes.string,
   styleWeekend: PropTypes.bool,
-  isDisabled: PropTypes.bool
+  isDisabled: PropTypes.bool,
+  isActive: PropTypes.bool.isRequired
 };
 
 CalendarDateItem.defaultProps = {

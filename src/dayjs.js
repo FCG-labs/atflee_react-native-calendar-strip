@@ -5,22 +5,13 @@ import isBetween from 'dayjs/plugin/isBetween';
 import updateLocale from 'dayjs/plugin/updateLocale';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
 import weekday from 'dayjs/plugin/weekday';
+import isoWeek from 'dayjs/plugin/isoWeek';
 
 dayjs.extend(isBetween);
 dayjs.extend(updateLocale);
 dayjs.extend(advancedFormat);
 dayjs.extend(weekday);
-
-// Plugin to provide Moment-like isoWeekday functionality
-const isoWeekday = (option, DayjsClass) => { 
-  DayjsClass.prototype.isoWeekday = function(input) {
-    const current = this.day() === 0 ? 7 : this.day();
-    if (input == null) return current;
-    return this.add(input - current, 'day');
-  };
-};
-
-dayjs.extend(isoWeekday);
+dayjs.extend(isoWeek);
 
 // Attempt to load a locale in React-Native (Metro bundler doesn't support dynamic requires).
 // Maintain a small static map for commonly used locales. Extend this list as needed.
@@ -54,6 +45,6 @@ export const loadLocale = (name) => {
   }
 };
 
-export const startOfISOWeek = (date) => date.isoWeekday(1).startOf('day');
+export const startOfISOWeek = (date) => date.startOf('isoWeek').startOf('day');
 
 export default dayjs;
