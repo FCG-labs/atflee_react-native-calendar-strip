@@ -270,7 +270,6 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     const date = selectedDate || startingDate || new Date();
     return date;
   });
-  const prevActiveDateRef = useRef(activeDate);
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
   const [leftWidth, setLeftWidth] = useState(0);
   const [rightWidth, setRightWidth] = useState(0);
@@ -285,27 +284,6 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     
     if (selectedDate && !dayjs(selectedDate).isSame(dayjs(activeDate), 'day')) {
       setActiveDate(selectedDate);
-      
-      // Invalidate only the two weeks that changed active state (prev & next)
-      const prevWeekStart = getWeekStart(prevActiveDateRef.current);
-      const nextWeekStart = getWeekStart(selectedDate);
-
-      if (!prevWeekStart.isSame(nextWeekStart, 'day')) {
-        setWeeks(currWeeks =>
-          currWeeks.map(week => {
-            const weekStart = getWeekStart(week.startDate);
-            if (
-              weekStart.isSame(prevWeekStart, 'day') ||
-              weekStart.isSame(nextWeekStart, 'day')
-            ) {
-              return { ...week }; // shallow clone – new reference triggers rerender
-            }
-            return week;
-          })
-        );
-      }
-
-      prevActiveDateRef.current = selectedDate;
       
       // Check if selectedDate is in current window
       const targetWeekStart = getWeekStart(selectedDate);
