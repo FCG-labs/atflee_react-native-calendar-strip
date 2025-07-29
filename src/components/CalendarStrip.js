@@ -271,6 +271,11 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     const date = selectedDate || startingDate || new Date();
     return date;
   });
+
+  // Epoch for active date to optimize re-rendering
+  const activeEpoch = useMemo(() => dayjs(activeDate).valueOf(), [activeDate]);
+
+
   const [viewWidth, setViewWidth] = useState(Dimensions.get('window').width);
   const [leftWidth, setLeftWidth] = useState(0);
   const [rightWidth, setRightWidth] = useState(0);
@@ -686,7 +691,8 @@ const CalendarStrip = forwardRef(function CalendarStrip({
   }, [contentWidth]);
 
   // Render week
-  const renderWeek = useCallback(({ item: week }) => {
+  const renderWeek = useCallback(({ item: week, index }) => {
+    console.log(`[CalendarStrip] renderWeek: index=${index}, start=${week.startDate.format('YYYY-MM-DD')}, end=${week.endDate.format('YYYY-MM-DD')}`);
     return (
       <View style={[styles.week, { width: contentWidth }]}>
         {week.days.map(day => (

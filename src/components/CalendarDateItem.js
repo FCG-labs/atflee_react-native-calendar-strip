@@ -40,6 +40,7 @@ const CalendarDateItem = memo(({ isActive,
   
   // Cache parsed date for performance
   const dateObj = dayjs(date);
+  console.log(`[CalendarDateItem] render: date=${dateObj.format('YYYY-MM-DD')} isActive=${isActive}`);
   const active = isActive;
   // Generate accessibility label for the date
   const accessibilityLabel = dateObj.format('dddd, MMMM D, YYYY');
@@ -93,6 +94,7 @@ const CalendarDateItem = memo(({ isActive,
   
   // Use custom day component if provided, otherwise render default
   if (dayComponent) {
+    console.log(`[CalendarDateItem] custom dayComponent render: date=${dateObj.format('YYYY-MM-DD')}`);
     return dayComponent({
       date,
       isActive: active,
