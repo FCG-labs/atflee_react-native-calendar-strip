@@ -1,8 +1,9 @@
-import React, { memo, useContext } from 'react';
+import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import PropTypes from 'prop-types';
 import dayjs from 'dayjs';
 import ActiveDateContext from '../ActiveDateContext';
+import { useContextSelector } from '../utils/useContextSelector';
 
 /**
  * CalendarDateItem component
@@ -37,8 +38,10 @@ const CalendarDateItem = memo(({
   styleWeekend,
   isDisabled
 }) => {
-  const contextActiveDate = useContext(ActiveDateContext);
-  const active = dayjs(date).isSame(dayjs(contextActiveDate), 'day');
+  const active = useContextSelector(
+    ActiveDateContext,
+    ctx => dayjs(date).isSame(dayjs(ctx), 'day')
+  );
   // Generate accessibility label for the date
   const accessibilityLabel = dayjs(date).format('dddd, MMMM D, YYYY');
   
