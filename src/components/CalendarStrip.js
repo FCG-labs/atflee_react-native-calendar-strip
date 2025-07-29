@@ -734,7 +734,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
             isToday={day.isToday}
             isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
             isCurrentMonth={day.isCurrentMonth}
-            onDateSelected={() => handleDateSelection(day.date)}
+            onDateSelected={handleDateSelection}
             markedDates={markedDates}
             markedDatesStyle={markedDatesStyle}
             markerComponent={markerComponent}
@@ -837,7 +837,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
                   isToday={day.isToday}
                   isWeekend={day.dayOfWeek === 0 || day.dayOfWeek === 6}
                   isCurrentMonth={day.isCurrentMonth}
-                  onDateSelected={() => handleDateSelection(day.date)}
+                  onDateSelected={handleDateSelection}
                   markedDates={markedDates}
                   markedDatesStyle={markedDatesStyle}
                   markerComponent={markerComponent}

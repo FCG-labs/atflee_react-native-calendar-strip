@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import PropTypes from 'prop-types';
 import dayjs from '../dayjs';
@@ -64,6 +64,13 @@ const CalendarDateItem = memo(({ isActive,
   // Apply custom styling for weekend if enabled
   const isStyledWeekend = styleWeekend && isWeekend;
 
+  const handlePress = useCallback(() => {
+    if (!isDisabled) {
+      onDateSelected(date);
+    }
+  }, [isDisabled, onDateSelected, date]);
+
+
   // Determine styles based on active/today state
   const containerStyle = useMemo(() => [
     styles.dateContainer,
@@ -104,14 +111,14 @@ const CalendarDateItem = memo(({ isActive,
       isWeekend,
       isDisabled,
       markedDate: hasMarker,
-      onDateSelected: () => isDisabled ? null : onDateSelected(date)
+      onDateSelected: handlePress,
     });
   }
   
   return (
     <TouchableOpacity
       style={containerStyle}
-      onPress={() => isDisabled ? null : onDateSelected(date)}
+      onPress={handlePress}
       activeOpacity={isDisabled ? 1 : activeOpacity}
       disabled={isDisabled}
       accessibilityLabel={accessibilityLabel}
