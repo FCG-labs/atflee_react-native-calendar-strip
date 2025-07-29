@@ -26,11 +26,17 @@ module.exports = {
   },
   transformIgnorePatterns: [
     // React Native은 node_modules에서도 변환이 필요함
-    'node_modules/(?!(react-native|@react-native|react-native-.*|@react-native-.*)/)'
+    'node_modules/(?!(react-native|@react-native|react-native-.*|@react-native-.*)/)',
   ],
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',  // node -> jsdom으로 변경
   globals: {
     __DEV__: true
   },
-  testMatch: ['**/__tests__/**/*.test.js']
+  testMatch: ['**/__tests__/**/*.test.js'],
+  // 모킹 자동화
+  automock: false,
+  unmockedModulePathPatterns: [
+    'node_modules/react/',
+    'node_modules/enzyme/'
+  ]
 };
