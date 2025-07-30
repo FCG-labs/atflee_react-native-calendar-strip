@@ -125,23 +125,7 @@ const CalendarStrip = forwardRef(function CalendarStrip({
    * 사용자는 useFlashList를 지정할 수 있지만 내부적으로는 항상 FlashList 사용
    */
   const ListComponent = FlashList;
-  
-  /**
-   * @internal
-   * FlatList 지원 중단 관련 경고 로직
-   * - 공개 API와 내부 구현을 명확히 분리하기 위해 useFlashList prop은 유지
-   * - 값이 false일 경우에만 개발 환경에서 경고 표시
-   */
-  /**
-   * @deprecated FlatList 지원 중단 알림
-   * 사용자에게 변경사항 안내
-   */
-  useEffect(() => {
-    if (useFlashList === false && isDevEnvironment) {
-      // eslint-disable-next-line no-console
-      console.warn('[CalendarStrip] FlatList 지원이 중단되었습니다. FlashList만 지원됩니다. useFlashList prop은 향후 버전에서 제거될 예정입니다.');
-    }
-  }, [useFlashList]);
+
 
   /**
    * @internal
@@ -152,15 +136,22 @@ const CalendarStrip = forwardRef(function CalendarStrip({
   const didInitialCenterRef = useRef(false);
   // Track the currently visible week to avoid redundant callbacks
   const currentWeekRef = useRef('');
+  // Ignore onViewableItemsChanged while programmatic re-centering animation runs
+  const recentringRef = useRef(false);
   // Skip onWeekChanged on initial render
   const skipInitialRef = useRef(true);
 
   // Helper to programmatically re-center the list to CENTER_INDEX
   const reCenter = useCallback(() => {
     if (flatListRef.current) {
-      flatListRef.current.scrollToIndex({ index: CENTER_INDEX, animated: scrollerPaging });
+      recentringRef.current = true;
+      requestAnimationFrame(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToIndex({ index: CENTER_INDEX, viewPosition: 0.5, animated: scrollerPaging });
+        }
+      });
     }
-  }, [scrollerPaging, CENTER_INDEX]);
+  }, [CENTER_INDEX]);
 
   // Cache previously generated weeks to avoid regeneration when buffer is large
   const weekCacheRef = useRef(new Map());
@@ -258,6 +249,13 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     return initCarousel();
   });
 
+  // Keep latest weeks in a ref so non-react callbacks (flushCompensation) can access
+  const weeksRef = useRef(weeks);
+
+  useEffect(() => {
+    weeksRef.current = weeks;
+  });
+
   useEffect(() => {
     if (isShiftingRef.current) {
       // Ignore interim week array changes triggered by shift; the correct week
@@ -271,7 +269,11 @@ const CalendarStrip = forwardRef(function CalendarStrip({
 
       // Invoke callback only if week actually changed and skip initial mount
       if (currentWeekRef.current !== weekKey) {
-        if (!skipInitialRef.current && onWeekChanged) {
+        if (!scrollable && !skipInitialRef.current && onWeekChanged) {
+          console.log('[CalendarStrip][useEffect] onWeekChanged', {
+            start: dayjs(centerWeek.startDate).toISOString(),
+            end: dayjs(centerWeek.endDate).toISOString(),
+          });
           onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
         }
         currentWeekRef.current = weekKey;
@@ -339,34 +341,13 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     if (selectedDate && !dayjs(selectedDate).isSame(dayjs(activeDate), 'day')) {
       setActiveDate(selectedDate);
       
-      // Check if selectedDate is in current window
-      const targetWeekStart = getWeekStart(selectedDate);
-      
-      const isInWindow = weeks.some(week => {
-        const weekStart = getWeekStart(week.startDate);
-        const match = weekStart.isSame(targetWeekStart, 'day');
-        return match;
+      didInitialCenterRef.current = false; // allow next layout effect to recenter
+      const newWeeks = initCarousel();
+      setWeeks(newWeeks);
+      // Immediate re-center after data applied (next frame)
+      requestAnimationFrame(() => {
+        reCenter();
       });
-      
-      
-      if (!isInWindow) {
-        didInitialCenterRef.current = false; // allow next layout effect to recenter
-        const newWeeks = initCarousel();
-        setWeeks(newWeeks);
-        // Ensure re-center after new data applied (next frame)
-        InteractionManager.runAfterInteractions(reCenter);
-
-      } else if (scrollable) {
-        // Selected date is already in the week buffer – scroll to its week so it becomes visible.
-        const targetIdx = weeks.findIndex(week =>
-          getWeekStart(week.startDate).isSame(targetWeekStart, 'day')
-        );
-        if (targetIdx !== -1) {
-          requestAnimationFrame(() => {
-            flatListRef.current?.scrollToIndex({ index: targetIdx, animated: scrollerPaging });
-          });
-        }
-      }
     }
   }, [selectedDate, activeDate, weeks, getWeekStart, initCarousel, reCenter, scrollable, scrollerPaging]);
 
@@ -399,6 +380,12 @@ const CalendarStrip = forwardRef(function CalendarStrip({
   // Latest usable content width (excludes selectors) and pending compensation
   const contentWidthRef = useRef(0);
   const pendingDeltaRef = useRef(0);
+  // Guard to ignore the immediately-following onViewableItemsChanged that
+  // fires right after a window shift compensation scroll. Without this,
+  // CalendarStrip may briefly emit an incorrect week when a new week is
+  // prepended/appended and FlatList fires a viewability change before the
+  // layout fully settles, causing month header mis-sync.
+  const skipNextViewabilityRef = useRef(false);
   
   const shiftLeft = useCallback(() => {
     if (isShiftingRef.current) {
@@ -429,8 +416,9 @@ const CalendarStrip = forwardRef(function CalendarStrip({
         return currentWeeks; // nothing added
       }
 
-      weeksToAdd.reverse(); // maintain chronological order
-      return [...weeksToAdd, ...currentWeeks.slice(0, WINDOW_SIZE - addedCount)];
+      const updatedWeeks = [...weeksToAdd, ...currentWeeks.slice(0, WINDOW_SIZE - addedCount)];
+      weeksRef.current = updatedWeeks; // keep ref in sync for scrollEnd
+      return updatedWeeks;
     });
 
     queueCompensation(addedCount);
@@ -474,7 +462,9 @@ const CalendarStrip = forwardRef(function CalendarStrip({
         return currentWeeks;
       }
 
-      return [...currentWeeks.slice(addedCount), ...weeksToAdd];
+      const updatedWeeks = [...currentWeeks.slice(addedCount), ...weeksToAdd];
+      weeksRef.current = updatedWeeks; // keep ref in sync for scrollEnd
+      return updatedWeeks;
     });
 
     queueCompensation(-addedCount);
@@ -518,6 +508,23 @@ const CalendarStrip = forwardRef(function CalendarStrip({
       // Reset edge guard when back in the middle
       if (page === CENTER_INDEX) {
         edgeShiftHandledRef.current = false;
+        if (recentringRef.current && page === CENTER_INDEX) {
+          recentringRef.current = false;
+        }
+
+        // Always emit onWeekChanged at final snapped position to guarantee
+        // consumer sync, even if the week is same as before.
+        const centerW = weeksRef.current[CENTER_INDEX];
+        if (centerW && onWeekChanged) {
+          const s = dayjs(centerW.startDate);
+          const e = dayjs(centerW.endDate);
+          console.log('[CalendarStrip][scrollEnd] onWeekChanged', {
+            start: s.toISOString(),
+            end: e.toISOString(),
+          });
+          onWeekChanged(s, e);
+          currentWeekRef.current = `${s.format('YYYY-MM-DD')}_${e.format('YYYY-MM-DD')}`;
+        }
       }
 
       // If a shift animation is still in progress, flush pending queue.
@@ -569,7 +576,27 @@ const CalendarStrip = forwardRef(function CalendarStrip({
 
     lastOffsetRef.current = newOffset;
     flatListRef.current?.scrollToOffset({ offset: newOffset, animated: false });
+    // Ignore the very next viewability callback; it reflects the shift, not user intent
+    skipNextViewabilityRef.current = true;
     isShiftingRef.current = false;
+
+    // --- Guarantee onWeekChanged after compensation ------------------------
+    const centerWeek = weeksRef.current[CENTER_INDEX];
+    if (centerWeek) {
+      const start = dayjs(centerWeek.startDate);
+      const end = dayjs(centerWeek.endDate);
+      const key = `${start.format('YYYY-MM-DD')}_${end.format('YYYY-MM-DD')}`;
+
+      if (currentWeekRef.current !== key && onWeekChanged) {
+        console.log('[CalendarStrip][compensation] onWeekChanged', {
+          start: start.toISOString(),
+          end: end.toISOString(),
+        });
+        onWeekChanged(start, end);
+      }
+
+      currentWeekRef.current = key;
+    }
   }, [WINDOW_SIZE]);
 
   // queue compensation and ensure a flush next frame
@@ -587,7 +614,11 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     // compensation completes and `isShiftingRef` is cleared, the next
     // viewability change (triggered by real user interaction) will fire the
     // correct callbacks.
-    if (isShiftingRef.current) {
+    if (isShiftingRef.current || skipNextViewabilityRef.current) {
+      if (skipNextViewabilityRef.current) {
+        // Consume the guard once
+        skipNextViewabilityRef.current = false;
+      }
       return;
     }
     if (!viewableItems || viewableItems.length === 0) {
@@ -613,7 +644,18 @@ const CalendarStrip = forwardRef(function CalendarStrip({
 
     if (closestIdx == null) return;
 
+    // If the closest week is at the edges (0 or WINDOW_SIZE-1) a shift will
+    // happen immediately; skip emitting weekChanged for this transient week.
+    if (closestIdx === 0 || closestIdx === weeks.length - 1) {
+      return;
+    }
+
     const centerWeek = weeks[closestIdx];
+
+    if (recentringRef.current) {
+      // Skip interim callbacks during recenter animation
+      return;
+    }
 
     if (!centerWeek) return;
 
@@ -622,6 +664,10 @@ const CalendarStrip = forwardRef(function CalendarStrip({
     // Avoid redundant callbacks if week hasn't changed
     if (currentWeekRef.current !== weekKey) {
       if (onWeekChanged) {
+        console.log('[CalendarStrip][viewability] onWeekChanged', {
+          start: dayjs(centerWeek.startDate).toISOString(),
+          end: dayjs(centerWeek.endDate).toISOString(),
+        });
         onWeekChanged(dayjs(centerWeek.startDate), dayjs(centerWeek.endDate));
       }
 
@@ -740,11 +786,6 @@ const CalendarStrip = forwardRef(function CalendarStrip({
 
   // Render week
   const renderWeek = useCallback(({ item: week, index }) => {
-    // debug 모드에서만 렌더링 로그 출력
-    if (debug) {
-      // eslint-disable-next-line no-console
-      console.log(`[CalendarStrip] renderWeek: index=${index}, start=${week.startDate.format('YYYY-MM-DD')}, end=${week.endDate.format('YYYY-MM-DD')}`);
-    }
     return (
       <View style={[styles.week, { width: contentWidth }]}>
         {week.days.map(day => (
