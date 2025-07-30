@@ -6,7 +6,7 @@ import React, { Component } from "react";
 import PropTypes from "prop-types";
 import { View, Animated, PixelRatio } from "react-native";
 
-import dayjs, { startOfISOWeek, loadLocale } from "./dayjs";
+import dayjs, { loadLocale } from "./dayjs";
 
 import CalendarHeader from "./CalendarHeader";
 import CalendarDay from "./CalendarDay";
@@ -99,7 +99,7 @@ class CalendarStrip extends Component {
 
   static defaultProps = {
     numDaysInWeek: 7,
-    useIsoWeekday: true,
+    useIsoWeekday: false,
     showMonth: true,
     showDate: true,
     updateWeek: true,
@@ -219,14 +219,12 @@ class CalendarStrip extends Component {
   };
 
   getInitialStartingDate = () => {
-    if (this.props.startingDate) {
-      return this.setLocale(this.props.startingDate);
-    } else {
-      // Fallback when startingDate isn't provided. However selectedDate
-      // may also be undefined, defaulting to today's date.
-      let date = this.setLocale(dayjs(this.props.selectedDate));
-      return this.props.useIsoWeekday ? date.startOf("isoweek") : date;
-    }
+    // Always start weeks on Sunday
+    const baseDate = this.props.startingDate
+      ? this.setLocale(this.props.startingDate)
+      : this.setLocale(dayjs(this.props.selectedDate));
+
+    return baseDate.clone().day(0).startOf('day');
   };
 
   //Set startingDate to the previous week
@@ -288,10 +286,7 @@ class CalendarStrip extends Component {
     }
 
     this.animations = [];
-    let startingDate = dayjs(date);
-    startingDate = this.props.useIsoWeekday
-      ? startOfISOWeek(startingDate)
-      : startingDate;
+    let startingDate = dayjs(date).clone().day(0).startOf('day');
     const days = this.createDays(startingDate);
     this.setState({ startingDate, ...days });
   };
@@ -459,7 +454,6 @@ class CalendarStrip extends Component {
   createDays = (startingDate, selectedDate = this.state.selectedDate) => {
     const {
       numDaysInWeek,
-      useIsoWeekday,
       scrollable,
       minDate,
       maxDate,
@@ -479,15 +473,11 @@ class CalendarStrip extends Component {
         _startingDate = dayjs(minDate);
       }
     }
+    // Align to Sunday so each week is Sunday–Saturday
+    _startingDate = _startingDate.clone().day(0).startOf('day');
 
     for (let i = 0; i < numDays; i++) {
-      let date;
-      if (useIsoWeekday) {
-        // isoWeekday starts from Monday
-        date = this.setLocale(_startingDate.clone().isoWeekday(i + 1));
-      } else {
-        date = this.setLocale(_startingDate.clone().add(i, "days"));
-      }
+      const date = this.setLocale(_startingDate.clone().add(i, "days"));
       if (scrollable) {
         if (maxDate && date.isAfter(maxDate, "day")) {
           break;
