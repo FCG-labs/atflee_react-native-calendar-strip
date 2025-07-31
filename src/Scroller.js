@@ -135,11 +135,8 @@ export default class CalendarScroller extends Component {
 
   // Scroll to given date, and check against min and max date if available.
   scrollToDate = (date) => {
-    // let targetDate = moment(date).subtract(
-    //   Math.round(this.state.numVisibleItems / 2) - 1,
-    //   "days"
-    // );
-    let targetDate = dayjs(date).isoWeekday(1);
+    // Align target date to Sunday so weeks remain Sun–Sat throughout.
+    let targetDate = dayjs(date).day(0).startOf('day');
     const { minDate, maxDate } = this.props;
 
     // Falls back to min or max date when the given date exceeds the available dates
