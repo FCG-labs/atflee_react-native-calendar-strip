@@ -124,7 +124,7 @@ class CalendarStrip extends Component {
 
   constructor(props) {
     super(props);
-    this.numDaysScroll = 480; // prefer even number divisible by 3
+    this.numDaysScroll = 800; // prefer even number divisible by 3
 
     const startingDate = this.getInitialStartingDate();
     const selectedDate = this.setLocale(this.props.selectedDate);
