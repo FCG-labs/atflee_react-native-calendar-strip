@@ -224,7 +224,6 @@ export default class CalendarScroller extends Component {
       visibleStartDate: _visStartDate,
       visibleEndDate: _visEndDate,
     } = this.state;
-    console.log("onVisibleIndicesChanged", all, now, notNow);
     const visibleStartIndex = all[0];
     const visibleStartDate = data[visibleStartIndex]
       ? data[visibleStartIndex].date
@@ -350,12 +349,16 @@ export default class CalendarScroller extends Component {
     }
 
     const pagingProps = this.props.pagingEnabled
-      ? {
-          pagingEnabled: true, // enable native paging per interval
-          decelerationRate: 1,
-          snapToInterval: this.state.itemWidth * this.state.numVisibleItems,
-          snapToAlignment: "start",
-        }
+      ? Platform.OS === 'ios'
+        ? {
+            decelerationRate: 0,
+            snapToInterval: this.state.itemWidth * this.state.numVisibleItems,  
+          } : {
+            pagingEnabled: true, // enable native paging per interval
+            decelerationRate: 1,
+            snapToInterval: this.state.itemWidth * this.state.numVisibleItems,
+            snapToAlignment: "start",
+          }
       : {};
 
     return (
