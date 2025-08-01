@@ -124,7 +124,7 @@ class CalendarStrip extends Component {
 
   constructor(props) {
     super(props);
-    this.numDaysScroll = 800; // prefer even number divisible by 3
+    this.numDaysScroll = 480; // prefer even number divisible by 3
 
     const startingDate = this.getInitialStartingDate();
     const selectedDate = this.setLocale(this.props.selectedDate);
@@ -324,6 +324,34 @@ class CalendarStrip extends Component {
       const scrolledDate = dayjs(mDate);
       scrolledDate.subtract(Math.floor(this.props.numDaysInWeek / 2), "days");
       this.scroller.scrollToDate(scrolledDate);
+    }
+  };
+
+  // Scroll to a given date regardless of current window.
+  // If the date is outside the existing datesList range, recreate the list so
+  // that the date becomes visible, then perform a scroll.
+  scrollToDateForce = (date) => {
+    if (this.props.scrollable) {
+      const target = dayjs(date);
+      if (!target.isValid()) {
+        return;
+      }
+      // Align start date to Sunday so weeks remain Sun–Sat.
+      const startingDate = target.clone().day(0).startOf("day");
+
+      // Regenerate datesList around the new startingDate, then scroll.
+      this.setState(
+        {
+          startingDate,
+          ...this.createDays(startingDate),
+        },
+        () => {
+          this.scroller && this.scroller.scrollToDate(target);
+        }
+      );
+    } else {
+      // Non-scrollable mode: just update the week view.
+      this.updateWeekView(date);
     }
   };
 
