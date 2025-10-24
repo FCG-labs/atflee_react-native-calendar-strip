@@ -37,6 +37,8 @@ export default StyleSheet.create({
 
   //CALENDAR DAY
   dateRootContainer: {
+    // Non-scrollable mode: flex for equal distribution
+    // Scrollable mode: fixed width set in CalendarDay component
     flex: 1,
   },
   dateContainer: {

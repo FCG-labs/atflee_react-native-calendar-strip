@@ -347,56 +347,13 @@ export interface CalendarStripProps {
   calendarRef?: RefObject<CalendarStripMethods>;
 }
 
-/**
- * Methods exposed by the CalendarStrip component through refs
- * These match exactly what's implemented in useImperativeHandle in CalendarStrip.js
- */
-export interface CalendarStripMethods {
-  /**
-   * Jump to specific date
-   * @param date The date to jump to
-   */
-  jumpToDate(date: Dayjs): void;
-  
-  /**
-   * Scroll to specific date (alias for jumpToDate)
-   * @param date The date to scroll to
-   */
-  scrollToDate(date: Dayjs): void;
-  
-  /**
-   * Get the currently selected date
-   * @returns Native Date object of the selected date
-   */
-  getSelectedDate(): Dayjs;
-  
-  /**
-   * Navigate to the next week
-   */
-  goToNextWeek(): void;
-  
-  /**
-   * Navigate to the previous week
-   */
-  goToPreviousWeek(): void;
-  
-  /**
-   * Get the current week's data including days and date range
-   * @returns Current week data or null if not available
-   */
-  getCurrentWeek(): CalendarWeek | null;
-  
-  /**
-   * Get all loaded weeks data
-   * @returns Array of week data objects
-   */
-  getWeeks(): CalendarWeek[];
-  
-  /**
-   * Get current week index
-   * @returns Current week index number
-   */
-  getCurrentWeekIndex(): number;
+export default class ReactNativeCalendarStrip extends Component<CalendarStripProps> {
+  getSelectedDate: () => undefined | Date | string;
+  setSelectedDate: (date: Dayjs | string) => void;
+  getNextWeek: () => void;
+  getPreviousWeek: () => void;
+  updateWeekView: (date: Dayjs | string) => void;
+  scrollToDateForce: (date: Dayjs | string) => void;
 }
 
 /**
