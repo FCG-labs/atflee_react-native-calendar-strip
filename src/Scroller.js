@@ -6,7 +6,7 @@
 // an infinite scroller.
 
 import React, { Component } from "react";
-import { View } from "react-native";
+import { View, Platform } from "react-native";
 import PropTypes from "prop-types";
 import {
   RecyclerListView,
@@ -352,12 +352,12 @@ export default class CalendarScroller extends Component {
       ? Platform.OS === 'ios'
         ? {
             decelerationRate: 0,
-            snapToInterval: this.state.itemWidth * this.state.numVisibleItems,  
+            snapToInterval: this.state.itemWidth * this.state.numVisibleItems,
           } : {
             pagingEnabled: true, // enable native paging per interval
             decelerationRate: 1,
             snapToInterval: this.state.itemWidth * this.state.numVisibleItems,
-            snapToAlignment: "start",
+            snapToAlignment: "center", // Center alignment for balanced snapping
           }
       : {};
 
@@ -378,7 +378,7 @@ export default class CalendarScroller extends Component {
           externalScrollView={this.props.externalScrollView}
           scrollViewProps={{
             showsHorizontalScrollIndicator: false,
-            contentContainerStyle: { paddingRight: this.state.itemWidth / 2 },
+            contentContainerStyle: {},
             onMomentumScrollBegin: this.onScrollStart,
             onMomentumScrollEnd: this.onScrollEnd,
             onScrollBeginDrag: this.onScrollBeginDrag,
