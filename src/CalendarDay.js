@@ -8,6 +8,7 @@ import dayjs from "./dayjs";
 
 import { Text, View, Animated, Easing, LayoutAnimation, TouchableOpacity } from "react-native";
 import styles from "./Calendar.style.js";
+import { FONT_SIZE_RATIOS } from "./utils/layoutCalculator";
 
 class CalendarDay extends Component {
   static propTypes = {
@@ -161,9 +162,11 @@ class CalendarDay extends Component {
     return {
       containerWidth: Math.round(props.width),
       containerHeight: Math.round(props.height),
+      // Circular container: radius is half the width
       containerBorderRadius: Math.round(props.width / 2),
-      dateNameFontSize: Math.round(props.width / 5),
-      dateNumberFontSize: Math.round(props.width / 2.9)
+      // Font sizes calculated using defined ratios from layoutCalculator
+      dateNameFontSize: Math.round(props.width * FONT_SIZE_RATIOS.DAY_NAME),
+      dateNumberFontSize: Math.round(props.width * FONT_SIZE_RATIOS.DAY_NUMBER)
     };
   }
 

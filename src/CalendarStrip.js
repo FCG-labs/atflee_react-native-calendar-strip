@@ -13,6 +13,7 @@ import CalendarDay from "./CalendarDay";
 import WeekSelector from "./WeekSelector";
 import Scroller from "./Scroller";
 import styles from "./Calendar.style.js";
+import { calculateResponsiveLayout } from "./utils/layoutCalculator";
 
 /*
  * Class CalendarStrip that is representing the whole calendar strip and contains CalendarDay elements
@@ -395,23 +396,36 @@ class CalendarStrip extends Component {
       scrollable,
       dayComponentHeight,
     } = this.props;
-    let csWidth = PixelRatio.roundToNearestPixel(layout.width);
-    let dayComponentWidth = csWidth / numDaysInWeek + responsiveSizingOffset;
-    dayComponentWidth = Math.min(dayComponentWidth, maxDayComponentSize);
-    dayComponentWidth = Math.max(dayComponentWidth, minDayComponentSize);
-    let numVisibleDays = numDaysInWeek;
-    let marginHorizontal;
-    if (scrollable) {
-      numVisibleDays = Math.floor(csWidth / dayComponentWidth);
-      // Scroller requires spacing between days
-      marginHorizontal = Math.round(dayComponentWidth * 0.05);
-      dayComponentWidth = Math.round(dayComponentWidth * 0.9);
-    }
-    let monthFontSize = Math.round(dayComponentWidth / 3.2);
-    let selectorSize = Math.round(dayComponentWidth / 2.5);
+    
+    // Pixel-perfect container width
+    const csWidth = PixelRatio.roundToNearestPixel(layout.width);
+
+    // Calculate layout using mathematically precise space-around formula
+    const layoutMetrics = calculateResponsiveLayout(
+      csWidth,
+      numDaysInWeek,
+      {
+        maxDayComponentSize,
+        minDayComponentSize,
+        responsiveSizingOffset,
+      },
+      scrollable
+    );
+
+    const {
+      dayComponentWidth,
+      marginHorizontal,
+      numVisibleDays,
+      monthFontSize,
+      selectorSize: calculatedSelectorSize,
+    } = layoutMetrics;
+
+    // Calculate total height
     let height = showMonth ? monthFontSize : 0;
     height += showDate ? dayComponentHeight || dayComponentWidth : 0;
-    selectorSize = Math.min(selectorSize, height);
+    
+    // Ensure selector fits within height
+    const selectorSize = Math.min(calculatedSelectorSize, height);
 
     this.setState(
       {

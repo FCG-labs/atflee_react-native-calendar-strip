@@ -44,6 +44,9 @@ export default class CalendarScroller extends Component {
 
     this.updateLayout = (renderDayParams) => {
       const itemHeight = renderDayParams.height;
+      // Space-around layout: item width + margins on both sides
+      // marginHorizontal is calculated using precise space-around formula
+      // in CalendarStrip.onLayoutDebounce via layoutCalculator utility
       const itemWidth =
         renderDayParams.width + renderDayParams.marginHorizontal * 2;
 
