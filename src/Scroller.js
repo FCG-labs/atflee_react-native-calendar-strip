@@ -24,6 +24,7 @@ export default class CalendarScroller extends Component {
     minDate: PropTypes.any,
     maxDate: PropTypes.any,
     maxSimultaneousDays: PropTypes.number,
+    numVisibleDays: PropTypes.number.isRequired,
     updateMonthYear: PropTypes.func,
     onWeekChanged: PropTypes.func,
     onWeekScrollStart: PropTypes.func,
@@ -44,9 +45,6 @@ export default class CalendarScroller extends Component {
 
     this.updateLayout = (renderDayParams) => {
       const itemHeight = renderDayParams.height;
-      // Space-around layout: item width + margins on both sides
-      // marginHorizontal is calculated using precise space-around formula
-      // in CalendarStrip.onLayoutDebounce via layoutCalculator utility
       const itemWidth =
         renderDayParams.width + renderDayParams.marginHorizontal * 2;
 
@@ -76,7 +74,8 @@ export default class CalendarScroller extends Component {
     this.state = {
       ...this.updateLayout(props.renderDayParams),
       ...this.updateDaysData(props.data),
-      numVisibleItems: 1, // updated in onLayout
+      numVisibleItems: props.numVisibleDays,
+      containerWidth: 0,
     };
   }
 
@@ -109,6 +108,11 @@ export default class CalendarScroller extends Component {
       newState = { ...newState, ...this.updateDaysData(this.props.data) };
     }
 
+    if (this.props.numVisibleDays !== prevProps.numVisibleDays) {
+      updateState = true;
+      newState = { ...newState, numVisibleItems: this.props.numVisibleDays };
+    }
+
     if (updateState) {
       this.setState(newState);
     }
@@ -136,13 +140,10 @@ export default class CalendarScroller extends Component {
     this.rlv.scrollToIndex(newIndex, true);
   };
 
-  // Scroll to given date, and check against min and max date if available.
   scrollToDate = (date) => {
-    // Align target date to Sunday so weeks remain Sun–Sat throughout.
     let targetDate = dayjs(date).day(0).startOf('day');
     const { minDate, maxDate } = this.props;
 
-    // Falls back to min or max date when the given date exceeds the available dates
     if (minDate && targetDate.isBefore(minDate, "day")) {
       targetDate = minDate;
     } else if (maxDate && targetDate.isAfter(maxDate, "day")) {
@@ -192,22 +193,18 @@ export default class CalendarScroller extends Component {
       }
       data.push({ date });
     }
-    // Prevent reducing range when the minDate - maxDate range is small.
     if (data.length < this.props.maxSimultaneousDays) {
       return;
     }
 
-    // Scroll to previous date
     for (let i = 0; i < data.length; i++) {
       if (data[i].date.isSame(prevVisStart, "day")) {
         this.shifting = true;
         this.rlv.scrollToIndex(i, false);
-        // RecyclerListView sometimes returns position to old index after
-        // moving to the new one. Set position again after delay.
         this.timeoutResetPositionId = setTimeout(() => {
           this.timeoutResetPositionId = null;
           this.rlv.scrollToIndex(i, false);
-          this.shifting = false; // debounce
+          this.shifting = false;
         }, 800);
         break;
       }
@@ -218,7 +215,6 @@ export default class CalendarScroller extends Component {
     });
   };
 
-  // Track which dates are visible.
   onVisibleIndicesChanged = (all, now, notNow) => {
     const {
       data,
@@ -241,8 +237,6 @@ export default class CalendarScroller extends Component {
 
     const { updateMonthYear, onWeekChanged } = this.props;
 
-    // Fire month/year update on both week and month changes.  This is
-    // necessary for the header and onWeekChanged updates.
     if (
       !_visStartDate ||
       !_visEndDate ||
@@ -256,7 +250,6 @@ export default class CalendarScroller extends Component {
       onWeekChanged && onWeekChanged(visStart, visEnd);
     }
 
-    // Always update weekstart/end for WeekSelectors.
     updateMonthYear && updateMonthYear(visibleStartDate, visibleEndDate);
 
     if (visibleStartIndex === 0) {
@@ -297,11 +290,11 @@ export default class CalendarScroller extends Component {
         onWeekScrollEnd(visibleStartDate.clone(), visibleEndDate.clone());
       }
     }
+
   };
 
   onScrollBeginDrag = () => {
     const { onWeekScrollStart, onWeekScrollEnd } = this.props;
-    // Prev dates required only if scroll callbacks are defined
     if (!onWeekScrollStart && !onWeekScrollEnd) {
       return;
     }
@@ -329,11 +322,13 @@ export default class CalendarScroller extends Component {
     });
   };
 
+
+
   onLayout = (event) => {
-    let width = event.nativeEvent.layout.width;
-    this.setState({
-      numVisibleItems: Math.round(width / this.state.itemWidth),
-    });
+    const width = event.nativeEvent.layout.width;
+    if (this.state.containerWidth !== width) {
+      this.setState({ containerWidth: width });
+    }
   };
 
   rowRenderer = (type, data, i, extState) => {
@@ -364,6 +359,10 @@ export default class CalendarScroller extends Component {
           }
       : {};
 
+    const totalContentWidth = this.state.itemWidth * this.state.numVisibleItems;
+    const remainder = this.state.containerWidth - totalContentWidth;
+    const horizontalPadding = remainder > 0 ? remainder / 2 : 0;
+
     return (
       <View
         style={{ height: this.state.itemHeight, flex: 1 }}
@@ -381,7 +380,9 @@ export default class CalendarScroller extends Component {
           externalScrollView={this.props.externalScrollView}
           scrollViewProps={{
             showsHorizontalScrollIndicator: false,
-            contentContainerStyle: {},
+            contentContainerStyle: {
+              paddingHorizontal: horizontalPadding,
+            },
             onMomentumScrollBegin: this.onScrollStart,
             onMomentumScrollEnd: this.onScrollEnd,
             onScrollBeginDrag: this.onScrollBeginDrag,

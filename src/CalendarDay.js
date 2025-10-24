@@ -28,6 +28,7 @@ class CalendarDay extends Component {
 
     width: PropTypes.number,
     height: PropTypes.number,
+    marginHorizontal: PropTypes.number,
 
     dateNameStyle: PropTypes.any,
     dateNumberStyle: PropTypes.any,
@@ -72,7 +73,8 @@ class CalendarDay extends Component {
     showDayNumber: true,
     upperCaseDays: true,
     width: 0, // Default width and height to avoid calcSizes() *sometimes* doing Math.round(undefined) to cause NaN
-    height: 0
+    height: 0,
+    marginHorizontal: 0
   };
 
   constructor(props) {
@@ -520,15 +522,26 @@ class CalendarDay extends Component {
       );
     }
 
+    const rootContainerStyle = [
+      styles.dateRootContainer,
+      scrollable ? {
+        flex: 0,
+        width: containerWidth + (this.props.marginHorizontal || 0) * 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+      } : null
+    ];
+
     return calendarAnimation && !scrollable ? (
-      <Animated.View style={[
-        styles.dateRootContainer,
-        {opacity: this.state.animatedValue}
-      ]}>
+      <Animated.View 
+        style={[
+          ...rootContainerStyle,
+          {opacity: this.state.animatedValue}
+        ]}>
         {day}
       </Animated.View>
     ) : (
-      <View style={styles.dateRootContainer}>
+      <View style={rootContainerStyle}>
         {day}
       </View>
     );

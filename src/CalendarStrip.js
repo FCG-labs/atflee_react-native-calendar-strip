@@ -125,7 +125,7 @@ class CalendarStrip extends Component {
 
   constructor(props) {
     super(props);
-    this.numDaysScroll = 800; // prefer even number divisible by 3
+    this.numDaysScroll = 180; // prefer even number divisible by 3
 
     const startingDate = this.getInitialStartingDate();
     const selectedDate = this.setLocale(this.props.selectedDate);
@@ -593,6 +593,7 @@ class CalendarStrip extends Component {
           renderDay={this.renderDay}
           renderDayParams={{ ...this.createDayProps(this.state.selectedDate) }}
           maxSimultaneousDays={this.numDaysScroll}
+          numVisibleDays={this.state.numVisibleDays}
           initialRenderIndex={this.state.initialScrollerIndex}
           minDate={this.props.minDate}
           maxDate={this.props.maxDate}
