@@ -75,6 +75,7 @@ interface CalendarStripProps {
   numDaysInWeek?: number;
   scrollable?: boolean;
   scrollerPaging?: boolean;
+  scrollerRenderAheadOffset?: number;
   externalScrollView?: ComponentProps<typeof RecyclerListView>['externalScrollView'];
   startingDate?: Dayjs | Date;
   selectedDate?: Dayjs | Date;

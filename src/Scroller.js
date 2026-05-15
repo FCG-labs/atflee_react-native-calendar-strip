@@ -31,6 +31,7 @@ export default class CalendarScroller extends Component {
     onWeekScrollEnd: PropTypes.func,
     externalScrollView: PropTypes.func,
     pagingEnabled: PropTypes.bool,
+    renderAheadOffset: PropTypes.number,
   };
 
   static defaultProps = {
@@ -375,6 +376,7 @@ export default class CalendarScroller extends Component {
           rowRenderer={this.rowRenderer}
           extendedState={this.props.renderDayParams}
           initialRenderIndex={this.props.initialRenderIndex}
+          renderAheadOffset={this.props.renderAheadOffset}
           onVisibleIndicesChanged={this.onVisibleIndicesChanged}
           isHorizontal
           externalScrollView={this.props.externalScrollView}
