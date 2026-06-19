@@ -15,6 +15,7 @@ import {
 } from "recyclerlistview";
 import dayjs from "./dayjs";
 import {
+  alignWeekStartIndex,
   getVisibleRangeAtIndex,
   isPlausibleSettledWeek,
   resolveVisibleStartIndex,
@@ -146,7 +147,12 @@ export default class CalendarScroller extends Component {
 
   resolveVisibleStartIndex = () => {
     const { data, visibleStartIndex } = this.state;
-    return resolveVisibleStartIndex(this.rlv, visibleStartIndex, data.length);
+    return resolveVisibleStartIndex(
+      this.rlv,
+      visibleStartIndex,
+      data.length,
+      data
+    );
   };
 
   getVisibleWeek = () => {
@@ -220,6 +226,14 @@ export default class CalendarScroller extends Component {
     if (minDate && newStartDate.isBefore(minDate, "day")) {
       _newStartDate = dayjs(minDate);
     }
+    // Infinite-scroll buffer must stay on Sunday boundaries (Sun–Sat paging).
+    _newStartDate = _newStartDate.clone().day(0).startOf("day");
+    if (minDate && _newStartDate.isBefore(minDate, "day")) {
+      _newStartDate = dayjs(minDate).clone().day(0).startOf("day");
+      if (_newStartDate.isBefore(minDate, "day")) {
+        _newStartDate = dayjs(minDate);
+      }
+    }
     for (let i = 0; i < this.state.numDays; i++) {
       let date = _newStartDate.clone().add(i, "days");
       if (maxDate && date.isAfter(maxDate, "day")) {
@@ -258,16 +272,26 @@ export default class CalendarScroller extends Component {
       visibleEndDate: _visEndDate,
     } = this.state;
     const visibleStartIndex = all[0];
-    const visibleStartDate = data[visibleStartIndex]
+    const alignedStartIndex = alignWeekStartIndex(data, visibleStartIndex);
+    const alignedRange = getVisibleRangeAtIndex(
+      data,
+      alignedStartIndex,
+      numVisibleItems
+    );
+    const visibleStartDate = alignedRange
+      ? alignedRange.visibleStartDate
+      : data[visibleStartIndex]
       ? data[visibleStartIndex].date
       : dayjs();
-    const visibleEndIndex = Math.min(
-      visibleStartIndex + numVisibleItems - 1,
-      data.length - 1
-    );
-    const visibleEndDate = data[visibleEndIndex]
-      ? data[visibleEndIndex].date
+    const visibleEndDate = alignedRange
+      ? alignedRange.visibleEndDate
+      : data[Math.min(visibleStartIndex + numVisibleItems - 1, data.length - 1)]
+      ? data[Math.min(visibleStartIndex + numVisibleItems - 1, data.length - 1)]
+          .date
       : dayjs();
+    const settledStartIndex = alignedRange
+      ? alignedRange.visibleStartIndex
+      : visibleStartIndex;
 
     const { updateMonthYear, onWeekChanged } = this.props;
 
@@ -304,7 +328,7 @@ export default class CalendarScroller extends Component {
     this.setState({
       visibleStartDate,
       visibleEndDate,
-      visibleStartIndex,
+      visibleStartIndex: settledStartIndex,
     });
   };
 
@@ -332,6 +356,16 @@ export default class CalendarScroller extends Component {
     }
 
     const startIndex = this.resolveVisibleStartIndex();
+    let rawStartIndex = this.rlv?.findApproxFirstVisibleIndex?.();
+    if (typeof rawStartIndex !== "number") {
+      rawStartIndex = visibleStartIndex ?? 0;
+    }
+    rawStartIndex = Math.max(0, Math.min(rawStartIndex, data.length - 1));
+
+    if (startIndex !== rawStartIndex) {
+      this.rlv?.scrollToIndex(startIndex, false);
+    }
+
     const range = getVisibleRangeAtIndex(data, startIndex, numVisibleItems);
     if (!range) {
       return;

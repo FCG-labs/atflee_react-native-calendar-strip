@@ -126,7 +126,7 @@ class CalendarStrip extends Component {
 
   constructor(props) {
     super(props);
-    this.numDaysScroll = 90; // prefer even number divisible by 3
+    this.numDaysScroll = 84; // 12 weeks; divisible by 3 (shift) and 7 (Sun–Sat paging)
 
     const startingDate = this.getInitialStartingDate();
     const selectedDate = this.setLocale(this.props.selectedDate);
