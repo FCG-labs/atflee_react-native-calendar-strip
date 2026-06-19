@@ -13,11 +13,12 @@ import {
   getSundayWeekStart,
 } from "./scrollContracts";
 import { formatDiagDate, logCalendarDiag } from "./calendarDiag";
+import { isDateInNeighborWeeks } from "./weekScrollerModel";
 
 import CalendarHeader from "./CalendarHeader";
 import CalendarDay from "./CalendarDay";
 import WeekSelector from "./WeekSelector";
-import Scroller from "./Scroller";
+import ScrollerPager from "./ScrollerPager";
 import styles from "./Calendar.style.js";
 import { calculateResponsiveLayout } from "./utils/layoutCalculator";
 
@@ -433,15 +434,10 @@ class CalendarStrip extends Component {
         return;
       }
 
-      const datesList = this.state.datesList || [];
-      let inRange = false;
-      for (let i = 0; i < datesList.length; i++) {
-        const entryDate = datesList[i]?.date;
-        if (entryDate && dayjs(entryDate).isSame(target, "day")) {
-          inRange = true;
-          break;
-        }
-      }
+      const anchorSunday = getSundayWeekStart(this.state.startingDate);
+      const inRange =
+        this.scroller &&
+        isDateInNeighborWeeks(anchorSunday, target, this.props.numDaysInWeek);
 
       if (inRange) {
         logCalendarDiag(
@@ -449,13 +445,13 @@ class CalendarStrip extends Component {
           "scrollToDateForce",
           {
             targetDate: formatDiagDate(target),
-            path: "in-range-scroll-only",
-            datesListCount: datesList.length,
+            path: "neighbor-week-set-anchor",
+            anchorSunday: formatDiagDate(anchorSunday),
           },
           "SCROLL_TO_FORCE"
         );
         this.setState({ selectedDate: this.setLocale(target) }, () => {
-          this.scroller && this.scroller.scrollToDate(target);
+          this.scroller.setAnchorWeek(target, { emitSettled: false });
         });
         return;
       }
@@ -469,7 +465,6 @@ class CalendarStrip extends Component {
           targetDate: formatDiagDate(target),
           path: "out-of-range-recreate",
           startingSunday: formatDiagDate(startingDate),
-          datesListCount: datesList.length,
         },
         "SCROLL_TO_FORCE"
       );
@@ -480,7 +475,7 @@ class CalendarStrip extends Component {
           ...this.createDays(startingDate, target),
         },
         () => {
-          this.scroller && this.scroller.scrollToDate(target);
+          this.scroller && this.scroller.setAnchorWeek(target);
         }
       );
     } else {
@@ -750,23 +745,18 @@ class CalendarStrip extends Component {
   renderWeekView(days) {
     if (this.props.scrollable && this.state.datesList.length) {
       return (
-        <Scroller
+        <ScrollerPager
           ref={(scroller) => (this.scroller = scroller)}
-          data={this.state.datesList}
-          pagingEnabled={this.props.scrollerPaging}
-          renderAheadOffset={this.props.scrollerRenderAheadOffset}
+          initialWeekSunday={getSundayWeekStart(this.state.startingDate)}
           renderDay={this.renderDay}
           renderDayParams={{ ...this.createDayProps(this.state.selectedDate) }}
-          maxSimultaneousDays={this.getScrollBufferDayCount()}
           numVisibleDays={this.state.numVisibleDays}
-          initialRenderIndex={this.state.initialScrollerIndex}
           minDate={this.props.minDate}
           maxDate={this.props.maxDate}
           updateMonthYear={this.updateMonthYear}
           onWeekChanged={this.props.onWeekChanged}
           onWeekScrollStart={this.props.onWeekScrollStart}
           onWeekScrollEnd={this.props.onWeekScrollEnd}
-          externalScrollView={this.props.externalScrollView}
         />
       );
     }

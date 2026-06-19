@@ -13,6 +13,7 @@
  * - CDU_SKIP             : componentDidUpdate no-op
  * - CDU_SELECTED_ONLY    : selectedDate highlight만 갱신
  * - REBUILD_STORM        : 500ms 내 BUFFER_REBUILD 2회 이상
+ * - WEEK_OFFSET_SET      : week-offset SSOT 주차 전환 (ScrollerPager)
  */
 let diagSeq = 0;
 let lastRebuildTs = 0;
