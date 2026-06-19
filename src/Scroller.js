@@ -16,9 +16,13 @@ import {
 import dayjs from "./dayjs";
 import {
   alignWeekStartIndex,
+  buildScrollBufferData,
+  getSundayWeekStart,
   getVisibleRangeAtIndex,
   isPlausibleSettledWeek,
   resolveVisibleStartIndex,
+  shouldRebuildBufferBackward,
+  shouldRebuildBufferForward,
 } from "./scrollContracts";
 
 export default class CalendarScroller extends Component {
@@ -198,65 +202,33 @@ export default class CalendarScroller extends Component {
     }
   };
 
-  // Shift dates when end of list is reached.
-  shiftDaysForward = (visibleStartDate = this.state.visibleStartDate) => {
-    const prevVisStart = visibleStartDate.clone();
-    const newStartDate = prevVisStart
-      .clone()
-      .subtract(Math.floor(this.state.numDays / 3), "days");
-    this.updateDays(prevVisStart, newStartDate);
-  };
-
-  // Shift dates when beginning of list is reached.
-  shiftDaysBackward = (visibleStartDate) => {
-    const prevVisStart = visibleStartDate.clone();
-    const newStartDate = prevVisStart
-      .clone()
-      .subtract(Math.floor((this.state.numDays * 2) / 3), "days");
-    this.updateDays(prevVisStart, newStartDate);
-  };
-
-  updateDays = (prevVisStart, newStartDate) => {
+  // Rebuild 3-window buffer (prev | current | next) centered on visible week.
+  rebuildBufferAroundWeek = (visibleWeekSunday) => {
     if (this.shifting) {
       return;
     }
+
     const { minDate, maxDate } = this.props;
-    const data = [];
-    let _newStartDate = newStartDate;
-    if (minDate && newStartDate.isBefore(minDate, "day")) {
-      _newStartDate = dayjs(minDate);
-    }
-    // Infinite-scroll buffer must stay on Sunday boundaries (Sun–Sat paging).
-    _newStartDate = _newStartDate.clone().day(0).startOf("day");
-    if (minDate && _newStartDate.isBefore(minDate, "day")) {
-      _newStartDate = dayjs(minDate).clone().day(0).startOf("day");
-      if (_newStartDate.isBefore(minDate, "day")) {
-        _newStartDate = dayjs(minDate);
-      }
-    }
-    for (let i = 0; i < this.state.numDays; i++) {
-      let date = _newStartDate.clone().add(i, "days");
-      if (maxDate && date.isAfter(maxDate, "day")) {
-        break;
-      }
-      data.push({ date });
-    }
-    if (data.length < this.props.maxSimultaneousDays) {
+    const { numVisibleItems } = this.state;
+    const { data, anchorIndex } = buildScrollBufferData({
+      visibleWeekSunday: getSundayWeekStart(visibleWeekSunday),
+      numVisibleDays: numVisibleItems,
+      minDate,
+      maxDate,
+    });
+
+    if (data.length < numVisibleItems * 2) {
       return;
     }
 
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].date.isSame(prevVisStart, "day")) {
-        this.shifting = true;
-        this.rlv.scrollToIndex(i, false);
-        this.timeoutResetPositionId = setTimeout(() => {
-          this.timeoutResetPositionId = null;
-          this.rlv.scrollToIndex(i, false);
-          this.shifting = false;
-        }, 800);
-        break;
-      }
-    }
+    this.shifting = true;
+    this.rlv.scrollToIndex(anchorIndex, false);
+    this.timeoutResetPositionId = setTimeout(() => {
+      this.timeoutResetPositionId = null;
+      this.rlv.scrollToIndex(anchorIndex, false);
+      this.shifting = false;
+    }, 400);
+
     this.setState({
       data,
       dataProvider: this.dataProvider.cloneWithRows(data),
@@ -312,17 +284,13 @@ export default class CalendarScroller extends Component {
 
     updateMonthYear && updateMonthYear(visibleStartDate, visibleEndDate);
 
-    if (visibleStartIndex === 0) {
-      this.shiftDaysBackward(visibleStartDate);
-    } else {
-      const minEndOffset = numDays - numVisibleItems;
-      if (minEndOffset > numVisibleItems) {
-        for (let a of all) {
-          if (a > minEndOffset) {
-            this.shiftDaysForward(visibleStartDate);
-            break;
-          }
-        }
+    if (!this.shifting && alignedRange) {
+      if (shouldRebuildBufferBackward(settledStartIndex, numVisibleItems)) {
+        this.rebuildBufferAroundWeek(visibleStartDate);
+      } else if (
+        shouldRebuildBufferForward(settledStartIndex, numDays, numVisibleItems)
+      ) {
+        this.rebuildBufferAroundWeek(visibleStartDate);
       }
     }
     this.setState({

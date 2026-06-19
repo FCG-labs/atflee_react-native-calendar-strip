@@ -1,5 +1,16 @@
 import dayjs from "./dayjs";
 
+/** Infinite scroll keeps exactly 3 windows: previous | current | next. */
+export const SCROLL_WINDOW_COUNT = 3;
+
+export function getScrollBufferDayCount(numVisibleDays) {
+  return numVisibleDays * SCROLL_WINDOW_COUNT;
+}
+
+export function getCenterWindowStartIndex(numVisibleDays) {
+  return numVisibleDays;
+}
+
 /** Sun–Sat week contract: week always starts on Sunday (day 0). */
 export function getSundayWeekStart(date) {
   return dayjs(date).day(0).startOf("day");
@@ -33,6 +44,59 @@ export function alignWeekStartIndex(data, roughIndex) {
   }
 
   return safeRough;
+}
+
+/**
+ * Build a 3-window scroll buffer centered on visibleWeekSunday.
+ * Returns data array and the index where that Sunday week starts.
+ */
+export function buildScrollBufferData({
+  visibleWeekSunday,
+  numVisibleDays,
+  minDate,
+  maxDate,
+}) {
+  const bufferDayCount = getScrollBufferDayCount(numVisibleDays);
+  const targetSunday = getSundayWeekStart(visibleWeekSunday);
+
+  let bufferStart = targetSunday.clone().subtract(numVisibleDays, "day");
+  if (minDate && bufferStart.isBefore(minDate, "day")) {
+    bufferStart = getSundayWeekStart(minDate);
+    if (bufferStart.isBefore(minDate, "day")) {
+      bufferStart = dayjs(minDate).startOf("day");
+    }
+  }
+
+  const data = [];
+  for (let i = 0; i < bufferDayCount; i++) {
+    const date = bufferStart.clone().add(i, "day");
+    if (maxDate && date.isAfter(maxDate, "day")) {
+      break;
+    }
+    data.push({ date });
+  }
+
+  let anchorIndex = getCenterWindowStartIndex(numVisibleDays);
+  for (let i = 0; i < data.length; i++) {
+    if (data[i].date.isSame(targetSunday, "day")) {
+      anchorIndex = i;
+      break;
+    }
+  }
+
+  return { data, anchorIndex };
+}
+
+export function shouldRebuildBufferBackward(settledStartIndex, numVisibleDays) {
+  return settledStartIndex < getCenterWindowStartIndex(numVisibleDays);
+}
+
+export function shouldRebuildBufferForward(
+  settledStartIndex,
+  dataLength,
+  numVisibleDays
+) {
+  return settledStartIndex >= dataLength - numVisibleDays;
 }
 
 /**
@@ -88,7 +152,6 @@ export function isPlausibleSettledWeek(prevStart, prevEnd, nextStart, nextEnd) {
   const nextStartD = dayjs(nextStart);
   const nextEndD = dayjs(nextEnd);
 
-  // Contract: visible week is always Sun(0) – Sat(6).
   if (nextStartD.day() !== 0 || nextEndD.day() !== 6) {
     return false;
   }

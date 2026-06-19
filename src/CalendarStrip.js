@@ -7,6 +7,11 @@ import PropTypes from "prop-types";
 import { View, Animated, PixelRatio } from "react-native";
 
 import dayjs, { loadLocale } from "./dayjs";
+import {
+  getCenterWindowStartIndex,
+  getScrollBufferDayCount,
+  getSundayWeekStart,
+} from "./scrollContracts";
 
 import CalendarHeader from "./CalendarHeader";
 import CalendarDay from "./CalendarDay";
@@ -126,7 +131,6 @@ class CalendarStrip extends Component {
 
   constructor(props) {
     super(props);
-    this.numDaysScroll = 84; // 12 weeks; divisible by 3 (shift) and 7 (Sun–Sat paging)
 
     const startingDate = this.getInitialStartingDate();
     const selectedDate = this.setLocale(this.props.selectedDate);
@@ -163,12 +167,15 @@ class CalendarStrip extends Component {
       prevProps.datesBlacklist !== this.props.datesBlacklist;
     const customStylesChanged =
       prevProps.customDatesStyles !== this.props.customDatesStyles;
+    const numDaysInWeekChanged =
+      prevProps.numDaysInWeek !== this.props.numDaysInWeek;
 
     // Scrollable: tap highlight only — same contract as onDateSelected.
     if (
       this.props.scrollable &&
       selectedChanged &&
       !startingChanged &&
+      !numDaysInWeekChanged &&
       !markedChanged &&
       !whitelistChanged &&
       !blacklistChanged &&
@@ -179,7 +186,12 @@ class CalendarStrip extends Component {
     }
 
     // Scrollable: dots/markings only — Scroller extendedState re-renders days.
-    if (this.props.scrollable && !selectedChanged && !startingChanged) {
+    if (
+      this.props.scrollable &&
+      !selectedChanged &&
+      !startingChanged &&
+      !numDaysInWeekChanged
+    ) {
       return;
     }
 
@@ -191,6 +203,7 @@ class CalendarStrip extends Component {
     if (
       startingChanged ||
       selectedChanged ||
+      numDaysInWeekChanged ||
       markedChanged ||
       whitelistChanged ||
       blacklistChanged ||
@@ -571,6 +584,10 @@ class CalendarStrip extends Component {
     };
   };
 
+  getScrollBufferDayCount = (numVisibleDays = this.props.numDaysInWeek) => {
+    return getScrollBufferDayCount(numVisibleDays);
+  };
+
   createDays = (startingDate, selectedDate = this.state.selectedDate) => {
     const {
       numDaysInWeek,
@@ -586,24 +603,27 @@ class CalendarStrip extends Component {
     let initialScrollerIndex;
 
     if (scrollable) {
-      numDays = this.numDaysScroll;
-      // Center start date in scroller.
-      _startingDate = startingDate.clone().subtract(numDays / 2, "days");
+      numDays = this.getScrollBufferDayCount(numDaysInWeek);
+      const weekSunday = getSundayWeekStart(startingDate);
+      _startingDate = weekSunday.clone().subtract(numDaysInWeek, "day");
       if (minDate && _startingDate.isBefore(minDate, "day")) {
-        _startingDate = dayjs(minDate);
+        _startingDate = getSundayWeekStart(minDate);
+        if (_startingDate.isBefore(minDate, "day")) {
+          _startingDate = dayjs(minDate).startOf("day");
+        }
       }
+      initialScrollerIndex = getCenterWindowStartIndex(numDaysInWeek);
     }
-    // Align to Sunday so each week is Sunday–Saturday
-    _startingDate = _startingDate.clone().day(0).startOf('day');
+    // Non-scrollable: align visible week to Sunday
+    if (!scrollable) {
+      _startingDate = _startingDate.clone().day(0).startOf("day");
+    }
 
     for (let i = 0; i < numDays; i++) {
       const date = this.setLocale(_startingDate.clone().add(i, "days"));
       if (scrollable) {
         if (maxDate && date.isAfter(maxDate, "day")) {
           break;
-        }
-        if (date.isSame(startingDate, "day")) {
-          initialScrollerIndex = i;
         }
         datesList.push({ date });
       } else {
@@ -671,7 +691,7 @@ class CalendarStrip extends Component {
           renderAheadOffset={this.props.scrollerRenderAheadOffset}
           renderDay={this.renderDay}
           renderDayParams={{ ...this.createDayProps(this.state.selectedDate) }}
-          maxSimultaneousDays={this.numDaysScroll}
+          maxSimultaneousDays={this.getScrollBufferDayCount()}
           numVisibleDays={this.state.numVisibleDays}
           initialRenderIndex={this.state.initialScrollerIndex}
           minDate={this.props.minDate}
