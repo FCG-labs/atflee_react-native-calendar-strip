@@ -1,4 +1,5 @@
 import dayjs from "./dayjs";
+import { describeWeekRange, logCalendarDiag, logWeekContractCheck } from "./calendarDiag";
 
 /** Infinite scroll keeps exactly 3 windows: previous | current | next. */
 export const SCROLL_WINDOW_COUNT = 3;
@@ -124,6 +125,18 @@ export function getVisibleRangeAtIndex(data, startIndex, numVisibleItems) {
   };
 }
 
+export function auditVisibleRange(layer, event, range, extra = {}) {
+  if (!range) {
+    return null;
+  }
+  logWeekContractCheck(layer, event, range.visibleStartDate, range.visibleEndDate, {
+    startIndex: range.visibleStartIndex,
+    endIndex: range.visibleEndIndex,
+    ...extra,
+  });
+  return range;
+}
+
 /**
  * Prefer RLV scroll offset, then snap to Sunday week boundary.
  */
@@ -153,10 +166,30 @@ export function isPlausibleSettledWeek(prevStart, prevEnd, nextStart, nextEnd) {
   const nextEndD = dayjs(nextEnd);
 
   if (nextStartD.day() !== 0 || nextEndD.day() !== 6) {
+    logCalendarDiag(
+      "scrollContracts",
+      "isPlausibleSettledWeek",
+      {
+        prev: describeWeekRange(prevStartD, prevEndD),
+        next: describeWeekRange(nextStartD, nextEndD),
+        reason: "dow-mismatch",
+      },
+      "WEEK_CONTRACT_BREAK"
+    );
     return false;
   }
 
   if (!nextEndD.isSame(nextStartD.add(6, "day"), "day")) {
+    logCalendarDiag(
+      "scrollContracts",
+      "isPlausibleSettledWeek",
+      {
+        prev: describeWeekRange(prevStartD, prevEndD),
+        next: describeWeekRange(nextStartD, nextEndD),
+        reason: "span-not-6",
+      },
+      "WEEK_CONTRACT_BREAK"
+    );
     return false;
   }
 
@@ -173,7 +206,19 @@ export function isPlausibleSettledWeek(prevStart, prevEnd, nextStart, nextEnd) {
   );
   if (gap <= 7) return true;
 
-  if (nextStartD.isAfter(prevEndD.add(7, "day"))) return false;
+  if (nextStartD.isAfter(prevEndD.add(7, "day"))) {
+    logCalendarDiag(
+      "scrollContracts",
+      "isPlausibleSettledWeek",
+      {
+        prev: describeWeekRange(prevStartD, prevEndD),
+        next: describeWeekRange(nextStartD, nextEndD),
+        reason: "forward-ghost-jump",
+      },
+      "GHOST_WEEK_REJECTED"
+    );
+    return false;
+  }
 
   return true;
 }

@@ -16,6 +16,7 @@ import {
 import dayjs from "./dayjs";
 import {
   alignWeekStartIndex,
+  auditVisibleRange,
   buildScrollBufferData,
   getSundayWeekStart,
   getVisibleRangeAtIndex,
@@ -24,6 +25,11 @@ import {
   shouldRebuildBufferBackward,
   shouldRebuildBufferForward,
 } from "./scrollContracts";
+import {
+  describeWeekRange,
+  formatDiagDate,
+  logCalendarDiag,
+} from "./calendarDiag";
 
 export default class CalendarScroller extends Component {
   static propTypes = {
@@ -205,21 +211,46 @@ export default class CalendarScroller extends Component {
   // Rebuild 3-window buffer (prev | current | next) centered on visible week.
   rebuildBufferAroundWeek = (visibleWeekSunday) => {
     if (this.shifting) {
+      logCalendarDiag("Scroller", "rebuildBufferAroundWeek.skipped", {
+        reason: "already-shifting",
+      });
       return;
     }
 
     const { minDate, maxDate } = this.props;
-    const { numVisibleItems } = this.state;
+    const { numVisibleItems, data: prevData } = this.state;
+    const anchorSunday = getSundayWeekStart(visibleWeekSunday);
     const { data, anchorIndex } = buildScrollBufferData({
-      visibleWeekSunday: getSundayWeekStart(visibleWeekSunday),
+      visibleWeekSunday: anchorSunday,
       numVisibleDays: numVisibleItems,
       minDate,
       maxDate,
     });
 
     if (data.length < numVisibleItems * 2) {
+      logCalendarDiag("Scroller", "rebuildBufferAroundWeek.skipped", {
+        reason: "buffer-too-small",
+        dataCount: data.length,
+        minRequired: numVisibleItems * 2,
+        anchorSunday: formatDiagDate(anchorSunday),
+      });
       return;
     }
+
+    logCalendarDiag(
+      "Scroller",
+      "rebuildBufferAroundWeek",
+      {
+        anchorSunday: formatDiagDate(anchorSunday),
+        anchorIndex,
+        prevDataCount: prevData?.length,
+        nextDataCount: data.length,
+        numVisibleItems,
+        bufferFirst: formatDiagDate(data[0]?.date),
+        bufferLast: formatDiagDate(data[data.length - 1]?.date),
+      },
+      "BUFFER_REBUILD"
+    );
 
     this.shifting = true;
     this.rlv.scrollToIndex(anchorIndex, false);
@@ -267,6 +298,16 @@ export default class CalendarScroller extends Component {
 
     const { updateMonthYear, onWeekChanged } = this.props;
 
+    auditVisibleRange("Scroller", "onVisibleIndicesChanged", alignedRange, {
+      rawStartIndex: visibleStartIndex,
+      alignedStartIndex,
+      settledStartIndex,
+      shifting: !!this.shifting,
+      all,
+      numDays,
+      numVisibleItems,
+    });
+
     // During infinite-scroll data shift, transient indices emit ghost weeks — skip preview.
     if (
       !this.shifting &&
@@ -280,16 +321,37 @@ export default class CalendarScroller extends Component {
       const visStart = visibleStartDate && visibleStartDate.clone();
       const visEnd = visibleEndDate && visibleEndDate.clone();
       onWeekChanged && onWeekChanged(visStart, visEnd);
+    } else if (this.shifting) {
+      logCalendarDiag(
+        "Scroller",
+        "onWeekChanged.suppressed",
+        {
+          week: describeWeekRange(visibleStartDate, visibleEndDate),
+          settledStartIndex,
+        },
+        "PREVIEW_SUPPRESSED"
+      );
     }
 
     updateMonthYear && updateMonthYear(visibleStartDate, visibleEndDate);
 
     if (!this.shifting && alignedRange) {
       if (shouldRebuildBufferBackward(settledStartIndex, numVisibleItems)) {
+        logCalendarDiag("Scroller", "rebuild.trigger", {
+          direction: "backward",
+          settledStartIndex,
+          centerIndex: numVisibleItems,
+        });
         this.rebuildBufferAroundWeek(visibleStartDate);
       } else if (
         shouldRebuildBufferForward(settledStartIndex, numDays, numVisibleItems)
       ) {
+        logCalendarDiag("Scroller", "rebuild.trigger", {
+          direction: "forward",
+          settledStartIndex,
+          forwardThreshold: numDays - numVisibleItems,
+          numDays,
+        });
         this.rebuildBufferAroundWeek(visibleStartDate);
       }
     }
@@ -331,16 +393,38 @@ export default class CalendarScroller extends Component {
     rawStartIndex = Math.max(0, Math.min(rawStartIndex, data.length - 1));
 
     if (startIndex !== rawStartIndex) {
+      logCalendarDiag(
+        "Scroller",
+        "onScrollEnd.snapFix",
+        {
+          rawStartIndex,
+          alignedStartIndex: startIndex,
+          rawDate: formatDiagDate(data[rawStartIndex]?.date),
+          alignedDate: formatDiagDate(data[startIndex]?.date),
+        },
+        "SCROLL_SNAP_FIX"
+      );
       this.rlv?.scrollToIndex(startIndex, false);
     }
 
     const range = getVisibleRangeAtIndex(data, startIndex, numVisibleItems);
     if (!range) {
+      logCalendarDiag("Scroller", "onScrollEnd.skipped", { reason: "no-range" });
       return;
     }
 
+    auditVisibleRange("Scroller", "onScrollEnd", range, {
+      rawStartIndex,
+      alignedStartIndex: startIndex,
+      prevWeek: describeWeekRange(prevStartDate, prevEndDate),
+    });
+
     const { visibleStartDate, visibleEndDate } = range;
     if (visibleEndDate.isSame(prevEndDate, "day")) {
+      logCalendarDiag("Scroller", "onScrollEnd.skipped", {
+        reason: "same-end-as-prev",
+        end: formatDiagDate(visibleEndDate),
+      });
       return;
     }
 
@@ -354,6 +438,16 @@ export default class CalendarScroller extends Component {
         visibleEndDate
       )
     ) {
+      logCalendarDiag(
+        "Scroller",
+        "onScrollEnd.skipped",
+        {
+          reason: "ghost-or-contract-rejected",
+          prevWeek: describeWeekRange(prevStartDate, prevEndDate),
+          nextWeek: describeWeekRange(visibleStartDate, visibleEndDate),
+        },
+        "GHOST_WEEK_REJECTED"
+      );
       return;
     }
 
@@ -361,6 +455,12 @@ export default class CalendarScroller extends Component {
       visibleStartDate,
       visibleEndDate,
       visibleStartIndex: range.visibleStartIndex,
+    });
+
+    logCalendarDiag("Scroller", "onScrollEnd.settled", {
+      week: describeWeekRange(visibleStartDate, visibleEndDate),
+      startIndex: range.visibleStartIndex,
+      endIndex: range.visibleEndIndex,
     });
 
     onWeekScrollEnd(visibleStartDate.clone(), visibleEndDate.clone());

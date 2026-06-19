@@ -21,7 +21,7 @@
   "bugs": {
     "url": "https://github.com/FCG-labs/atflee_react-native-calendar-strip/issues"
   },
-  "version": "2.2.11",
+  "version": "2.2.12",
   "main": "index.js",
   "directories": {
     "example": "example"

@@ -12,6 +12,7 @@ import {
   getScrollBufferDayCount,
   getSundayWeekStart,
 } from "./scrollContracts";
+import { formatDiagDate, logCalendarDiag } from "./calendarDiag";
 
 import CalendarHeader from "./CalendarHeader";
 import CalendarDay from "./CalendarDay";
@@ -181,6 +182,15 @@ class CalendarStrip extends Component {
       !blacklistChanged &&
       !customStylesChanged
     ) {
+      logCalendarDiag(
+        "CalendarStrip",
+        "componentDidUpdate",
+        {
+          nextSelectedDate: formatDiagDate(this.props.selectedDate),
+          stateStartingDate: formatDiagDate(this.state.startingDate),
+        },
+        "CDU_SELECTED_ONLY"
+      );
       this.setState({ selectedDate: this.setLocale(this.props.selectedDate) });
       return;
     }
@@ -192,6 +202,12 @@ class CalendarStrip extends Component {
       !startingChanged &&
       !numDaysInWeekChanged
     ) {
+      logCalendarDiag(
+        "CalendarStrip",
+        "componentDidUpdate",
+        { reason: "markings-only" },
+        "CDU_SKIP"
+      );
       return;
     }
 
@@ -222,6 +238,20 @@ class CalendarStrip extends Component {
     }
 
     if (updateState) {
+      logCalendarDiag(
+        "CalendarStrip",
+        "componentDidUpdate.createDays",
+        {
+          selectedChanged,
+          startingChanged,
+          numDaysInWeekChanged,
+          markedChanged,
+          nextSelectedDate: formatDiagDate(this.props.selectedDate),
+          nextStartingDate: formatDiagDate(this.props.startingDate),
+          stateStartingDate: formatDiagDate(this.state.startingDate),
+        },
+        "CREATE_DAYS"
+      );
       this.setState({ ...startingDate, ...selectedDate, ...days });
     }
   }
@@ -414,16 +444,35 @@ class CalendarStrip extends Component {
       }
 
       if (inRange) {
+        logCalendarDiag(
+          "CalendarStrip",
+          "scrollToDateForce",
+          {
+            targetDate: formatDiagDate(target),
+            path: "in-range-scroll-only",
+            datesListCount: datesList.length,
+          },
+          "SCROLL_TO_FORCE"
+        );
         this.setState({ selectedDate: this.setLocale(target) }, () => {
           this.scroller && this.scroller.scrollToDate(target);
         });
         return;
       }
 
-      // Align start date to Sunday so weeks remain Sun–Sat.
       const startingDate = target.clone().day(0).startOf("day");
 
-      // Regenerate datesList around the new startingDate, then scroll.
+      logCalendarDiag(
+        "CalendarStrip",
+        "scrollToDateForce",
+        {
+          targetDate: formatDiagDate(target),
+          path: "out-of-range-recreate",
+          startingSunday: formatDiagDate(startingDate),
+          datesListCount: datesList.length,
+        },
+        "SCROLL_TO_FORCE"
+      );
       this.setState(
         {
           startingDate,
@@ -643,6 +692,23 @@ class CalendarStrip extends Component {
       datesList,
       initialScrollerIndex,
     };
+
+    if (scrollable) {
+      logCalendarDiag(
+        "CalendarStrip",
+        "createDays",
+        {
+          numDaysInWeek,
+          bufferDayCount: datesList.length,
+          initialScrollerIndex,
+          bufferFirst: formatDiagDate(datesList[0]?.date),
+          bufferLast: formatDiagDate(datesList[datesList.length - 1]?.date),
+          centerWeekSunday: formatDiagDate(datesList[initialScrollerIndex]?.date),
+          startingDate: formatDiagDate(startingDate),
+        },
+        "CREATE_DAYS"
+      );
+    }
 
     if (!scrollable) {
       const weekStartDate = datesList[0].date;
