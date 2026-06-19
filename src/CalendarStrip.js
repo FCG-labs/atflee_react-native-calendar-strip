@@ -13,7 +13,6 @@ import {
   getSundayWeekStart,
 } from "./scrollContracts";
 import { formatDiagDate, logCalendarDiag } from "./calendarDiag";
-import { isDateInNeighborWeeks } from "./weekScrollerModel";
 
 import CalendarHeader from "./CalendarHeader";
 import CalendarDay from "./CalendarDay";
@@ -424,9 +423,7 @@ class CalendarStrip extends Component {
     }
   };
 
-  // Scroll to a given date regardless of current window.
-  // If the date is outside the existing datesList range, recreate the list so
-  // that the date becomes visible, then perform a scroll.
+  // Scroll to a given date regardless of current visible week (ScrollerPager SSOT).
   scrollToDateForce = (date) => {
     if (this.props.scrollable) {
       const target = dayjs(date);
@@ -434,54 +431,44 @@ class CalendarStrip extends Component {
         return;
       }
 
-      const anchorSunday = getSundayWeekStart(this.state.startingDate);
-      const inRange =
-        this.scroller &&
-        isDateInNeighborWeeks(anchorSunday, target, this.props.numDaysInWeek);
-
-      if (inRange) {
-        logCalendarDiag(
-          "CalendarStrip",
-          "scrollToDateForce",
-          {
-            targetDate: formatDiagDate(target),
-            path: "neighbor-week-set-anchor",
-            anchorSunday: formatDiagDate(anchorSunday),
-          },
-          "SCROLL_TO_FORCE"
-        );
-        this.setState({ selectedDate: this.setLocale(target) }, () => {
-          this.scroller.setAnchorWeek(target, { emitSettled: false });
-        });
-        return;
-      }
-
-      const startingDate = target.clone().day(0).startOf("day");
+      const weekSunday = getSundayWeekStart(target);
+      const visible = this.scroller?.getVisibleWeek?.();
+      const visibleWeekSunday = visible?.start
+        ? getSundayWeekStart(visible.start)
+        : null;
+      const sameWeek =
+        visibleWeekSunday &&
+        visibleWeekSunday.isSame(weekSunday, "day");
 
       logCalendarDiag(
         "CalendarStrip",
         "scrollToDateForce",
         {
           targetDate: formatDiagDate(target),
-          path: "out-of-range-recreate",
-          startingSunday: formatDiagDate(startingDate),
+          weekSunday: formatDiagDate(weekSunday),
+          visibleWeekSunday: formatDiagDate(visibleWeekSunday),
+          path: sameWeek ? "same-week-select" : "force-anchor-week",
         },
         "SCROLL_TO_FORCE"
       );
+
       this.setState(
         {
-          startingDate,
+          startingDate: weekSunday,
           selectedDate: this.setLocale(target),
-          ...this.createDays(startingDate, target),
+          ...this.createDays(weekSunday, target),
         },
         () => {
-          this.scroller && this.scroller.setAnchorWeek(target);
+          if (!this.scroller || sameWeek) {
+            return;
+          }
+          this.scroller.setAnchorWeek(target, { emitSettled: true });
         }
       );
-    } else {
-      // Non-scrollable mode: just update the week view.
-      this.updateWeekView(date);
+      return;
     }
+
+    this.updateWeekView(date);
   };
 
   getVisibleWeek = () => {
