@@ -17,6 +17,16 @@ export function getSundayWeekStart(date) {
   return dayjs(date).day(0).startOf("day");
 }
 
+/** 3-window buffer page boundaries: 0, numVisibleDays, 2*numVisibleDays */
+export function snapToPageStartIndex(rawIndex, numVisibleDays, dataLength) {
+  if (typeof rawIndex !== "number" || !numVisibleDays) {
+    return rawIndex ?? 0;
+  }
+  const page = Math.round(rawIndex / numVisibleDays) * numVisibleDays;
+  const maxPageStart = Math.max(0, dataLength - numVisibleDays);
+  return Math.max(0, Math.min(page, maxPageStart));
+}
+
 export function alignWeekStartIndex(data, roughIndex) {
   if (!data?.length || typeof roughIndex !== "number") {
     return roughIndex ?? 0;
@@ -88,16 +98,16 @@ export function buildScrollBufferData({
   return { data, anchorIndex };
 }
 
-export function shouldRebuildBufferBackward(settledStartIndex, numVisibleDays) {
-  return settledStartIndex < getCenterWindowStartIndex(numVisibleDays);
+export function shouldRebuildBufferBackward(pageStartIndex) {
+  return pageStartIndex === 0;
 }
 
 export function shouldRebuildBufferForward(
-  settledStartIndex,
+  pageStartIndex,
   dataLength,
   numVisibleDays
 ) {
-  return settledStartIndex >= dataLength - numVisibleDays;
+  return pageStartIndex >= dataLength - numVisibleDays;
 }
 
 /**
@@ -108,7 +118,11 @@ export function getVisibleRangeAtIndex(data, startIndex, numVisibleItems) {
     return null;
   }
 
-  const alignedStart = alignWeekStartIndex(data, startIndex);
+  const alignedStart = snapToPageStartIndex(
+    startIndex,
+    numVisibleItems,
+    data.length
+  );
   const safeStart = Math.max(0, Math.min(alignedStart, data.length - 1));
   const endIndex = Math.min(safeStart + numVisibleItems - 1, data.length - 1);
   const visibleStartDate = data[safeStart]?.date;
@@ -140,17 +154,23 @@ export function auditVisibleRange(layer, event, range, extra = {}) {
 /**
  * Prefer RLV scroll offset, then snap to Sunday week boundary.
  */
-export function resolveVisibleStartIndex(rlv, fallbackIndex, dataLength, data) {
+export function resolveVisibleStartIndex(
+  rlv,
+  fallbackIndex,
+  dataLength,
+  data,
+  numVisibleDays
+) {
   let idx = rlv?.findApproxFirstVisibleIndex?.();
   if (typeof idx !== "number") {
     idx = fallbackIndex ?? 0;
   }
   const maxIndex = Math.max(0, dataLength - 1);
   const clamped = Math.max(0, Math.min(idx, maxIndex));
-  if (!data?.length) {
+  if (!data?.length || !numVisibleDays) {
     return clamped;
   }
-  return alignWeekStartIndex(data, clamped);
+  return snapToPageStartIndex(clamped, numVisibleDays, dataLength);
 }
 
 /**

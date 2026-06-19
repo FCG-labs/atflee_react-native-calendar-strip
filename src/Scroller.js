@@ -18,17 +18,20 @@ import {
   alignWeekStartIndex,
   auditVisibleRange,
   buildScrollBufferData,
+  getCenterWindowStartIndex,
   getSundayWeekStart,
   getVisibleRangeAtIndex,
   isPlausibleSettledWeek,
   resolveVisibleStartIndex,
   shouldRebuildBufferBackward,
   shouldRebuildBufferForward,
+  snapToPageStartIndex,
 } from "./scrollContracts";
 import {
   describeWeekRange,
   formatDiagDate,
   logCalendarDiag,
+  noteBufferRebuild,
 } from "./calendarDiag";
 
 export default class CalendarScroller extends Component {
@@ -59,6 +62,9 @@ export default class CalendarScroller extends Component {
     super(props);
 
     this.timeoutResetPositionId = null;
+    this.shifting = false;
+    this.pendingRebuild = false;
+    this.lastRebuildAnchorIso = null;
 
     this.updateLayout = (renderDayParams) => {
       const itemHeight = renderDayParams.height;
@@ -156,12 +162,13 @@ export default class CalendarScroller extends Component {
   };
 
   resolveVisibleStartIndex = () => {
-    const { data, visibleStartIndex } = this.state;
+    const { data, visibleStartIndex, numVisibleItems } = this.state;
     return resolveVisibleStartIndex(
       this.rlv,
       visibleStartIndex,
       data.length,
-      data
+      data,
+      numVisibleItems
     );
   };
 
@@ -220,6 +227,16 @@ export default class CalendarScroller extends Component {
     const { minDate, maxDate } = this.props;
     const { numVisibleItems, data: prevData } = this.state;
     const anchorSunday = getSundayWeekStart(visibleWeekSunday);
+    const anchorIso = anchorSunday.format("YYYY-MM-DD");
+
+    if (this.lastRebuildAnchorIso === anchorIso) {
+      logCalendarDiag("Scroller", "rebuildBufferAroundWeek.skipped", {
+        reason: "same-anchor",
+        anchorSunday: formatDiagDate(anchorSunday),
+      });
+      return;
+    }
+
     const { data, anchorIndex } = buildScrollBufferData({
       visibleWeekSunday: anchorSunday,
       numVisibleDays: numVisibleItems,
@@ -252,6 +269,11 @@ export default class CalendarScroller extends Component {
       "BUFFER_REBUILD"
     );
 
+    noteBufferRebuild("Scroller", "rebuildBufferAroundWeek", {
+      anchorSunday: formatDiagDate(anchorSunday),
+      anchorIndex,
+    });
+    this.lastRebuildAnchorIso = anchorIso;
     this.shifting = true;
     this.rlv.scrollToIndex(anchorIndex, false);
     this.timeoutResetPositionId = setTimeout(() => {
@@ -335,26 +357,6 @@ export default class CalendarScroller extends Component {
 
     updateMonthYear && updateMonthYear(visibleStartDate, visibleEndDate);
 
-    if (!this.shifting && alignedRange) {
-      if (shouldRebuildBufferBackward(settledStartIndex, numVisibleItems)) {
-        logCalendarDiag("Scroller", "rebuild.trigger", {
-          direction: "backward",
-          settledStartIndex,
-          centerIndex: numVisibleItems,
-        });
-        this.rebuildBufferAroundWeek(visibleStartDate);
-      } else if (
-        shouldRebuildBufferForward(settledStartIndex, numDays, numVisibleItems)
-      ) {
-        logCalendarDiag("Scroller", "rebuild.trigger", {
-          direction: "forward",
-          settledStartIndex,
-          forwardThreshold: numDays - numVisibleItems,
-          numDays,
-        });
-        this.rebuildBufferAroundWeek(visibleStartDate);
-      }
-    }
     this.setState({
       visibleStartDate,
       visibleEndDate,
@@ -375,38 +377,48 @@ export default class CalendarScroller extends Component {
     const { onWeekScrollEnd } = this.props;
     const {
       data,
+      numDays,
       numVisibleItems,
       visibleStartIndex,
       prevEndDate,
       prevStartDate,
     } = this.state;
 
-    if (!onWeekScrollEnd || !data?.length) {
+    if (!data?.length) {
       return;
     }
 
-    const startIndex = this.resolveVisibleStartIndex();
     let rawStartIndex = this.rlv?.findApproxFirstVisibleIndex?.();
     if (typeof rawStartIndex !== "number") {
       rawStartIndex = visibleStartIndex ?? 0;
     }
     rawStartIndex = Math.max(0, Math.min(rawStartIndex, data.length - 1));
 
-    if (startIndex !== rawStartIndex) {
+    const pageStartIndex = snapToPageStartIndex(
+      rawStartIndex,
+      numVisibleItems,
+      data.length
+    );
+    const expectedCenterIndex = getCenterWindowStartIndex(numVisibleItems);
+
+    if (pageStartIndex !== rawStartIndex) {
       logCalendarDiag(
         "Scroller",
         "onScrollEnd.snapFix",
         {
           rawStartIndex,
-          alignedStartIndex: startIndex,
+          alignedStartIndex: pageStartIndex,
+          pageIndex: pageStartIndex,
+          expectedCenterIndex,
           rawDate: formatDiagDate(data[rawStartIndex]?.date),
-          alignedDate: formatDiagDate(data[startIndex]?.date),
+          alignedDate: formatDiagDate(data[pageStartIndex]?.date),
         },
         "SCROLL_SNAP_FIX"
       );
-      this.rlv?.scrollToIndex(startIndex, false);
+      this.rlv?.scrollToIndex(pageStartIndex, false);
     }
 
+    const startIndex = pageStartIndex;
     const range = getVisibleRangeAtIndex(data, startIndex, numVisibleItems);
     if (!range) {
       logCalendarDiag("Scroller", "onScrollEnd.skipped", { reason: "no-range" });
@@ -416,8 +428,56 @@ export default class CalendarScroller extends Component {
     auditVisibleRange("Scroller", "onScrollEnd", range, {
       rawStartIndex,
       alignedStartIndex: startIndex,
+      pageIndex: pageStartIndex,
+      expectedCenterIndex,
       prevWeek: describeWeekRange(prevStartDate, prevEndDate),
     });
+
+    if (
+      !this.shifting &&
+      !this.pendingRebuild &&
+      range
+    ) {
+      if (shouldRebuildBufferBackward(pageStartIndex)) {
+        logCalendarDiag("Scroller", "rebuild.trigger", {
+          direction: "backward",
+          pageStartIndex,
+          expectedCenterIndex,
+          trigger: "onScrollEnd",
+        });
+        this.pendingRebuild = true;
+        this.rebuildBufferAroundWeek(range.visibleStartDate);
+        this.pendingRebuild = false;
+        this.setState({
+          visibleStartDate: range.visibleStartDate,
+          visibleEndDate: range.visibleEndDate,
+          visibleStartIndex: range.visibleStartIndex,
+        });
+        return;
+      }
+      if (shouldRebuildBufferForward(pageStartIndex, numDays, numVisibleItems)) {
+        logCalendarDiag("Scroller", "rebuild.trigger", {
+          direction: "forward",
+          pageStartIndex,
+          forwardThreshold: numDays - numVisibleItems,
+          numDays,
+          trigger: "onScrollEnd",
+        });
+        this.pendingRebuild = true;
+        this.rebuildBufferAroundWeek(range.visibleStartDate);
+        this.pendingRebuild = false;
+        this.setState({
+          visibleStartDate: range.visibleStartDate,
+          visibleEndDate: range.visibleEndDate,
+          visibleStartIndex: range.visibleStartIndex,
+        });
+        return;
+      }
+    }
+
+    if (!onWeekScrollEnd) {
+      return;
+    }
 
     const { visibleStartDate, visibleEndDate } = range;
     if (visibleEndDate.isSame(prevEndDate, "day")) {

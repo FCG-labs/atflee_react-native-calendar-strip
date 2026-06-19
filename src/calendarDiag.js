@@ -12,8 +12,31 @@
  * - CREATE_DAYS          : datesList 재생성
  * - CDU_SKIP             : componentDidUpdate no-op
  * - CDU_SELECTED_ONLY    : selectedDate highlight만 갱신
+ * - REBUILD_STORM        : 500ms 내 BUFFER_REBUILD 2회 이상
  */
 let diagSeq = 0;
+let lastRebuildTs = 0;
+let rebuildBurstCount = 0;
+
+export function noteBufferRebuild(layer, event, payload = {}) {
+  const now = Date.now();
+  const withinWindow = lastRebuildTs > 0 && now - lastRebuildTs <= 500;
+  if (withinWindow) {
+    rebuildBurstCount += 1;
+  } else {
+    rebuildBurstCount = 1;
+  }
+  const sincePrevMs = lastRebuildTs > 0 ? now - lastRebuildTs : 0;
+  lastRebuildTs = now;
+  if (rebuildBurstCount >= 2) {
+    logCalendarDiag(
+      layer,
+      event,
+      { ...payload, rebuildBurstCount, sincePrevMs },
+      "REBUILD_STORM"
+    );
+  }
+}
 
 export function logCalendarDiag(layer, event, payload = {}, bugCode) {
   if (typeof __DEV__ === "undefined" || !__DEV__) {
