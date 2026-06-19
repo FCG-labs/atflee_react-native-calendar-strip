@@ -393,7 +393,8 @@ class CalendarStrip extends Component {
       const datesList = this.state.datesList || [];
       let inRange = false;
       for (let i = 0; i < datesList.length; i++) {
-        if (datesList[i].isSame(target, "day")) {
+        const entryDate = datesList[i]?.date;
+        if (entryDate && dayjs(entryDate).isSame(target, "day")) {
           inRange = true;
           break;
         }
