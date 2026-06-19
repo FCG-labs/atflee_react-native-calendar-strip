@@ -363,6 +363,10 @@ export default class CalendarScroller extends Component {
     const totalContentWidth = this.state.itemWidth * this.state.numVisibleItems;
     const remainder = this.state.containerWidth - totalContentWidth;
     const horizontalPadding = remainder > 0 ? remainder / 2 : 0;
+    const layoutSize = {
+      height: this.state.itemHeight,
+      width: this.state.containerWidth || totalContentWidth,
+    };
 
     return (
       <View
@@ -376,6 +380,7 @@ export default class CalendarScroller extends Component {
           rowRenderer={this.rowRenderer}
           extendedState={this.props.renderDayParams}
           initialRenderIndex={this.props.initialRenderIndex}
+          layoutSize={layoutSize}
           renderAheadOffset={this.props.renderAheadOffset}
           onVisibleIndicesChanged={this.onVisibleIndicesChanged}
           isHorizontal
