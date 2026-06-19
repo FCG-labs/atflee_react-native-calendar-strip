@@ -148,18 +148,53 @@ class CalendarStrip extends Component {
 
   //Receiving props and set date states, minimizing state updates.
   componentDidUpdate(prevProps, prevState) {
+    const selectedChanged = !this.compareDates(
+      prevProps.selectedDate,
+      this.props.selectedDate
+    );
+    const startingChanged = !this.compareDates(
+      prevProps.startingDate,
+      this.props.startingDate
+    );
+    const markedChanged = prevProps.markedDates !== this.props.markedDates;
+    const whitelistChanged =
+      prevProps.datesWhitelist !== this.props.datesWhitelist;
+    const blacklistChanged =
+      prevProps.datesBlacklist !== this.props.datesBlacklist;
+    const customStylesChanged =
+      prevProps.customDatesStyles !== this.props.customDatesStyles;
+
+    // Scrollable: tap highlight only — same contract as onDateSelected.
+    if (
+      this.props.scrollable &&
+      selectedChanged &&
+      !startingChanged &&
+      !markedChanged &&
+      !whitelistChanged &&
+      !blacklistChanged &&
+      !customStylesChanged
+    ) {
+      this.setState({ selectedDate: this.setLocale(this.props.selectedDate) });
+      return;
+    }
+
+    // Scrollable: dots/markings only — Scroller extendedState re-renders days.
+    if (this.props.scrollable && !selectedChanged && !startingChanged) {
+      return;
+    }
+
     let startingDate = {};
     let selectedDate = {};
     let days = {};
     let updateState = false;
 
     if (
-      !this.compareDates(prevProps.startingDate, this.props.startingDate) ||
-      !this.compareDates(prevProps.selectedDate, this.props.selectedDate) ||
-      prevProps.datesBlacklist !== this.props.datesBlacklist ||
-      prevProps.datesWhitelist !== this.props.datesWhitelist ||
-      prevProps.markedDates !== this.props.markedDates ||
-      prevProps.customDatesStyles !== this.props.customDatesStyles
+      startingChanged ||
+      selectedChanged ||
+      markedChanged ||
+      whitelistChanged ||
+      blacklistChanged ||
+      customStylesChanged
     ) {
       // Protect against undefined startingDate prop
       let _startingDate = this.props.startingDate || this.state.startingDate;
@@ -179,6 +214,22 @@ class CalendarStrip extends Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
+    if (this.props.scrollable) {
+      return (
+        !this.compareDates(this.props.selectedDate, nextProps.selectedDate) ||
+        !this.compareDates(this.props.startingDate, nextProps.startingDate) ||
+        this.props.markedDates !== nextProps.markedDates ||
+        this.props.datesWhitelist !== nextProps.datesWhitelist ||
+        this.props.datesBlacklist !== nextProps.datesBlacklist ||
+        this.props.customDatesStyles !== nextProps.customDatesStyles ||
+        this.props.numDaysInWeek !== nextProps.numDaysInWeek ||
+        this.props.scrollable !== nextProps.scrollable ||
+        JSON.stringify(this.state) !== JSON.stringify(nextState) ||
+        this.props.leftSelector !== nextProps.leftSelector ||
+        this.props.rightSelector !== nextProps.rightSelector
+      );
+    }
+
     // Extract selector icons since JSON.stringify fails on React component circular refs
     let _nextProps = Object.assign({}, nextProps);
     let _props = Object.assign({}, this.props);
@@ -338,6 +389,23 @@ class CalendarStrip extends Component {
       if (!target.isValid()) {
         return;
       }
+
+      const datesList = this.state.datesList || [];
+      let inRange = false;
+      for (let i = 0; i < datesList.length; i++) {
+        if (datesList[i].isSame(target, "day")) {
+          inRange = true;
+          break;
+        }
+      }
+
+      if (inRange) {
+        this.setState({ selectedDate: this.setLocale(target) }, () => {
+          this.scroller && this.scroller.scrollToDate(target);
+        });
+        return;
+      }
+
       // Align start date to Sunday so weeks remain Sun–Sat.
       const startingDate = target.clone().day(0).startOf("day");
 
@@ -345,7 +413,8 @@ class CalendarStrip extends Component {
       this.setState(
         {
           startingDate,
-          ...this.createDays(startingDate),
+          selectedDate: this.setLocale(target),
+          ...this.createDays(startingDate, target),
         },
         () => {
           this.scroller && this.scroller.scrollToDate(target);
@@ -355,6 +424,13 @@ class CalendarStrip extends Component {
       // Non-scrollable mode: just update the week view.
       this.updateWeekView(date);
     }
+  };
+
+  getVisibleWeek = () => {
+    if (!this.props.scrollable || !this.scroller) {
+      return null;
+    }
+    return this.scroller.getVisibleWeek();
   };
 
   // Gather animations from each day. Sequence animations must be started

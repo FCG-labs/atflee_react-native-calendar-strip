@@ -160,4 +160,5 @@ export default class ReactNativeCalendarStrip extends Component<CalendarStripPro
   getPreviousWeek: () => void;
   updateWeekView: (date: Dayjs | string) => void;
   scrollToDateForce: (date: Dayjs | string) => void;
+  getVisibleWeek: () => { start: Dayjs; end: Dayjs; startIndex: number; endIndex: number } | null;
 }
