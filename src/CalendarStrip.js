@@ -569,10 +569,14 @@ class CalendarStrip extends Component {
   };
 
   updateMonthYear = (weekStartDate, weekEndDate) => {
-    this.setState({
-      weekStartDate,
-      weekEndDate,
-    });
+    this.weekStartDate = weekStartDate;
+    this.weekEndDate = weekEndDate;
+    if (this.props.showMonth) {
+      this.setState({
+        weekStartDate,
+        weekEndDate,
+      });
+    }
   };
 
   createDayProps = (selectedDate) => {
